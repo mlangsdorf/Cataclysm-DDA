@@ -874,6 +874,24 @@ bool vehicle::has_engine_type_not( const itype_id &ft, bool const enabled ) cons
     return false;
 }
 
+bool vehicle::has_engine_conflict( const vpart_info *possible_conflict, std::string &conflict_type ) const
+{
+    std::vector<std::string> new_excludes = possible_conflict->engine_excludes();
+    bool has_conflict = false;
+
+    for( size_t e = 0; e < engines.size(); ++e ) {
+        std::vector<std::string> install_excludes = part_info( engines[e] ).engine_excludes();
+        std::vector<std::string> conflicts;
+        std::set_intersection( new_excludes.begin(), new_excludes.end(), install_excludes.begin(), install_excludes.end(), back_inserter( conflicts ) );
+        if( !conflicts.empty() ) {
+            has_conflict = true;
+            conflict_type = conflicts.front();
+            break;
+        }
+    }
+    return has_conflict;
+}
+
 bool vehicle::is_engine_type( const int e, const itype_id  &ft ) const
 {
     return part_info( engines[e] ).fuel_type == ft;
@@ -1244,20 +1262,24 @@ bool vehicle::fold_up() {
 
 double vehicle::engine_cold_factor( const int e ) const
 {
-    if( !is_engine_type( e, fuel_type_diesel ) ) { return 0.0; }
+    if( !part_info( engines[e] ).has_flag( "E_COLD_START" ) ) {
+        return 0.0;
+    }
 
     int eff_temp = g->get_temperature( g->u.pos() );
     if( !parts[ engines[ e ] ].faults().count( fault_glowplug ) ) {
         eff_temp = std::min( eff_temp, 20 );
     }
 
-    return 1.0 - (std::max( 0, std::min( 30, eff_temp ) ) / 30.0);
+    return 1.0 - ( std::max( 0, std::min( 30, eff_temp ) ) / 30.0 );
 }
 
 int vehicle::engine_start_time( const int e ) const
 {
-    if( !is_engine_on( e ) || is_engine_type( e, fuel_type_muscle ) ||
-        !fuel_left( part_info( engines[e] ).fuel_type ) ) { return 0; }
+    if( !is_engine_on( e ) || part_info( engines[e] ).has_flag( "E_STARTS_INSTANTLY" ) ||
+        !fuel_left( part_info( engines[e] ).fuel_type ) ) {
+        return 0;
+    }
 
     const double dmg = 1.0 - double( parts[engines[e]].hp() ) / part_info( engines[e] ).durability;
 
@@ -1285,12 +1307,12 @@ bool vehicle::start_engine( const int e )
         return false;
     }
 
-    const double dmg = 1.0 - ((double)parts[engines[e]].hp() / einfo.durability);
+    const double dmg = 1.0 - ( ( double )parts[engines[e]].hp() / einfo.durability );
     const int engine_power = part_power( engines[e], true );
     const double cold_factor = engine_cold_factor( e );
 
-    if( einfo.fuel_type != fuel_type_muscle ) {
-        if( einfo.fuel_type == fuel_type_gasoline && dmg > 0.75 && one_in( 20 ) ) {
+    if( einfo.engine_backfire_threshold() ) {
+        if( dmg > einfo.engine_backfire_threshold() && one_in( einfo.engine_backfire_freq() ) ) {
             backfire( e );
         } else {
             const tripoint pos = global_part_pos3( engines[e] );
@@ -1478,10 +1500,10 @@ const vpart_info& vehicle::part_info (int index, bool include_removed) const
 
 // engines & alternators all have power.
 // engines provide, whilst alternators consume.
-int vehicle::part_power(int const index, bool const at_full_hp) const
+int vehicle::part_power( int const index, bool const at_full_hp ) const
 {
-    if( !part_flag(index, VPFLAG_ENGINE) &&
-        !part_flag(index, VPFLAG_ALTERNATOR) ) {
+    if( !part_flag( index, VPFLAG_ENGINE ) &&
+        !part_flag( index, VPFLAG_ALTERNATOR ) ) {
        return 0; // not an engine.
     }
 
@@ -1492,12 +1514,8 @@ int vehicle::part_power(int const index, bool const at_full_hp) const
         pwr = vp.base.engine_displacement();
     }
 
-    if (part_info(index).fuel_type == fuel_type_muscle) {
-        int pwr_factor = (part_flag(index, "MUSCLE_LEGS") ? 5 : 0) +
-                         (part_flag(index, "MUSCLE_ARMS") ? 2 : 0);
-        ///\EFFECT_STR increases power produced for MUSCLE_* vehicles
-        pwr += int(((g->u).str_cur - 8) * pwr_factor);
-    }
+    ///\EFFECT_STR increases power produced for MUSCLE_* vehicles
+    pwr += ( g->u.str_cur - 8 ) * part_info( index ).engine_muscle_power_factor();
 
     if( pwr < 0 ) {
         return pwr; // Consumers always draw full power, even if broken
@@ -1505,13 +1523,10 @@ int vehicle::part_power(int const index, bool const at_full_hp) const
     if( at_full_hp ) {
         return pwr; // Assume full hp
     }
-    // Damaged engines give less power, but gas/diesel handle it better
-    if( part_info(index).fuel_type == fuel_type_gasoline ||
-        part_info(index).fuel_type == fuel_type_diesel ) {
-        return pwr * (0.25 + (0.75 * ((double)parts[index].hp() / part_info(index).durability)));
-    } else {
-        return double( pwr * parts[index].hp() ) / part_info(index).durability;
-    }
+    float dpf = part_info( index ).engine_damaged_power_factor();
+    double dmg_ratio = ( double )parts[index].hp() / part_info( index ).durability;
+    // Damaged engines give less power, but some engines handle it better
+    return ( int )( ( dpf + ( ( 1 - dpf ) * dmg_ratio ) ) * pwr );
  }
 
 // alternators, solar panels, reactors, and accessories all have epower.
@@ -1639,24 +1654,21 @@ bool vehicle::can_mount(int const dx, int const dy, const vpart_id &id) const
         }
     }
 
-    // only one muscle engine allowed
-    if( part.has_flag(VPFLAG_ENGINE) && part.fuel_type == fuel_type_muscle &&
-        has_engine_type(fuel_type_muscle, false) ) {
+    // only one exclusive engine allowed
+    std::string empty;
+    if( has_engine_conflict( &part, empty ) ) {
         return false;
     }
 
     // Alternators must be installed on a gas engine
-    if(part.has_flag(VPFLAG_ALTERNATOR)) {
+    if( part.has_flag( VPFLAG_ALTERNATOR ) ) {
         bool anchor_found = false;
         for( const auto &elem : parts_in_square ) {
-            if( part_info( elem ).has_flag( VPFLAG_ENGINE ) &&
-                ( part_info( elem ).fuel_type == fuel_type_gasoline ||
-                  part_info( elem ).fuel_type == fuel_type_diesel ||
-                  part_info( elem ).fuel_type == fuel_type_muscle)) {
+            if( part_info( elem ).has_flag( "E_ALTERNATOR" ) ) {
                 anchor_found = true;
             }
         }
-        if(!anchor_found) {
+        if( !anchor_found ) {
             return false;
         }
     }
@@ -2092,7 +2104,6 @@ bool vehicle::remove_part( int p )
     // Update current engine configuration if needed
     if( part_flag( p, "ENGINE" ) && engines.size() > 1 ) {
         bool any_engine_on = false;
-
         for( auto &e : engines ) {
             if( e != p && is_part_on( e ) ) {
                 any_engine_on = true;
@@ -3327,43 +3338,33 @@ bool vehicle::do_environmental_effects()
     return needed;
 }
 
-int vehicle::safe_velocity(bool const fueled) const
+int vehicle::safe_velocity( bool const fueled ) const
 {
     int pwrs = 0;
     int cnt = 0;
-    for (size_t e = 0; e < engines.size(); e++){
-        if (is_engine_on(e) &&
-            (!fueled || is_engine_type(e, fuel_type_muscle) ||
-            fuel_left (part_info(engines[e]).fuel_type))) {
-            int m2c = 100;
+    for( size_t e = 0; e < engines.size(); e++ ) {
+        if( is_engine_on( e ) &&
+            ( !fueled || is_engine_type( e, fuel_type_muscle ) ||
+            fuel_left( part_info( engines[e] ).fuel_type ) ) ) {
+            int m2c = part_info( engines[e] ).engine_m2c();
 
-            if (is_engine_type(e, fuel_type_gasoline)) {
-                m2c = 60;
-            } else if(is_engine_type(e, fuel_type_diesel)) {
-                m2c = 65;
-            } else if(is_engine_type(e, fuel_type_battery)) {
-                m2c = 90;
-            } else if(is_engine_type(e, fuel_type_muscle)) {
-                m2c = 45;
-            }
-
-            if( parts[ engines[ e ] ].faults().count( fault_filter_fuel ) ) {
+            if( parts[ engines[e] ].faults().count( fault_filter_fuel ) ) {
                 m2c *= 0.6;
             }
 
-            pwrs += part_power(engines[e]) * m2c / 100;
+            pwrs += part_power( engines[e] ) * m2c / 100;
             cnt++;
         }
     }
-    for (int a = 0; a < (int)alternators.size(); a++){
-         if (is_alternator_on(a)){
-            pwrs += part_power(alternators[a]); // alternator parts have negative power
+    for ( int a = 0; a < ( int )alternators.size(); a++ ) {
+         if ( is_alternator_on( a ) ){
+            pwrs += part_power( alternators[a] ); // alternator parts have negative power
          }
     }
-    if (cnt > 0) {
-        pwrs = pwrs * 4 / (4 + cnt -1);
+    if ( cnt > 0 ) {
+        pwrs = pwrs * 4 / ( 4 + cnt -1 );
     }
-    return (int) (pwrs * k_dynamics() * k_mass()) * 80;
+    return ( int )( pwrs * k_dynamics() * k_mass() ) * 80;
 }
 
 void vehicle::spew_smoke( double joules, int part, int density )
@@ -3401,10 +3402,10 @@ void vehicle::noise_and_smoke( double load, double time )
     int exhaust_part = -1;
     for( size_t p = 0; p < parts.size(); p++ ) {
         if( part_flag(p, "MUFFLER") ) {
-            m = 1.0 - (1.0 - part_info(p).bonus / 100.0) * double( parts[p].hp() ) / part_info(p).durability;
+            m = 1.0 - ( 1.0 - part_info( p ).bonus / 100.0 ) * double( parts[p].hp() ) / part_info( p ).durability;
             if( m < muffle ) {
                 muffle = m;
-                exhaust_part = int(p);
+                exhaust_part = int( p );
             }
         }
     }
@@ -3413,24 +3414,23 @@ void vehicle::noise_and_smoke( double load, double time )
 
     for( size_t e = 0; e < engines.size(); e++ ) {
         int p = engines[e];
-        if( is_engine_on(e) &&
-                (is_engine_type(e, fuel_type_muscle) || fuel_left (part_info(p).fuel_type)) ) {
+        // FIXME: fuel_left should be called with the vehicle_part's fuel_type for flexfuel support
+        if( is_engine_on( e ) &&
+            ( is_engine_type( e, fuel_type_muscle) || fuel_left( part_info( p ).fuel_type ) ) ) {
             double pwr = 10.0; // Default noise if nothing else found, shouldn't happen
-            double max_pwr = double(power_to_epower(part_power(p, true)))/40000;
+            double max_pwr = double( power_to_epower( part_power( p, true ) ) ) / 40000;
             double cur_pwr = load * max_pwr;
 
-            if( is_engine_type(e, fuel_type_gasoline) || is_engine_type(e, fuel_type_diesel)) {
-
-                if( is_engine_type( e, fuel_type_gasoline ) ) {
-                    double dmg = 1.0 - double( parts[p].hp() ) / part_info( p ).durability;
-                    if( parts[ p ].base.faults.count( fault_filter_fuel ) ) {
-                        dmg = 1.0;
-                    }
-                    if( dmg > 0.75 && one_in( 200 - ( 150 * dmg ) ) ) {
-                        backfire( e );
-                    }
+            if( part_info( p ).has_flag( "E_COMBUSTION" ) ) {
+                double dmg = 1.0 - double( parts[p].hp() ) / part_info( p ).durability;
+                if( parts[ p ].base.faults.count( fault_filter_fuel ) ) {
+                    dmg = 1.0;
                 }
-                double j = power_to_epower(part_power(p, true)) * load * time * muffle;
+                dmg = std::min( dmg, ( double )part_info( p ).engine_backfire_threshold() );
+                if( dmg > part_info( p ).engine_backfire_threshold() && one_in( 200 - ( 150 * dmg ) ) ) {
+                    backfire( e );
+                }
+                double j = power_to_epower( part_power( p, true ) ) * load * time * muffle;
 
                 if( parts[ p ].base.faults.count( fault_filter_air ) ) {
                     bad_filter = true;
@@ -3442,28 +3442,28 @@ void vehicle::noise_and_smoke( double load, double time )
                 } else {
                     mufflesmoke += j;
                 }
-                pwr = (cur_pwr*15 + max_pwr*3 + 5) * muffle;
-            } else if(is_engine_type(e, fuel_type_battery)) {
-                pwr = cur_pwr*3;
-            } else if(is_engine_type(e, fuel_type_muscle)) {
-                pwr = cur_pwr*5;
+                pwr = ( cur_pwr * part_info( p ).engine_noise_factor() + max_pwr * 3 + 5 ) * muffle;
+            } else if( is_engine_type( e, fuel_type_battery ) ) {
+                pwr = cur_pwr * part_info( p ).engine_noise_factor();
+            } else if( is_engine_type( e, fuel_type_muscle ) ) {
+                pwr = cur_pwr * part_info( p ).engine_noise_factor();
             }
-            noise = std::max(noise, pwr); // Only the loudest engine counts.
+            noise = std::max( noise, pwr ); // Only the loudest engine counts.
         }
     }
 
-    if( (exhaust_part != -1) && engine_on &&
-        has_engine_type_not(fuel_type_muscle, true)) { // No engine, no smoke
+    if( ( exhaust_part != -1 ) && engine_on &&
+        has_engine_type_not( fuel_type_muscle, true ) ) { // No engine, no smoke
         spew_smoke( mufflesmoke, exhaust_part, bad_filter ? MAX_FIELD_DENSITY : 1 );
     }
     // Even a vehicle with engines off will make noise traveling at high speeds
-    noise = std::max( noise, double(fabs(velocity/500.0)) );
+    noise = std::max( noise, double( fabs( velocity / 500.0 ) ) );
     int lvl = 0;
-    if( one_in(4) && rng(0, 30) < noise &&
-        has_engine_type_not(fuel_type_muscle, true)) {
-       while( noise > sound_levels[lvl] ) {
-           lvl++;
-       }
+    if( one_in( 4 ) && rng( 0, 30 ) < noise &&
+        has_engine_type_not( fuel_type_muscle, true ) ) {
+        while( noise > sound_levels[lvl] ) {
+            lvl++;
+        }
     }
     sounds::ambient_sound( global_pos3(), noise, sound_msgs[lvl] );
 }
@@ -3786,7 +3786,7 @@ void vehicle::power_parts()
     if( engine_on ) {
         for( size_t e = 0; e < engines.size(); ++e ) {
             // Electric engines consume power when actually used, not passively
-            if( is_engine_on( e ) && !is_engine_type(e, fuel_type_battery) ) {
+            if( is_engine_on( e ) && !is_engine_type( e, fuel_type_battery ) ) {
                 engine_epower += part_epower( engines[e] );
             }
         }
@@ -4293,9 +4293,9 @@ void vehicle::slow_leak()
         }
 
         auto fuel = p.ammo_current();
-        if( fuel != fuel_type_gasoline && fuel != fuel_type_diesel &&
-            fuel != fuel_type_battery && fuel != fuel_type_water ) {
-            continue; // not a liquid fuel or battery
+        // Solid fuels don't leak, nor do undefined types
+        if( !item::find_type( fuel )->phase || item::find_type( fuel )->phase == SOLID ) {
+            continue;
         }
 
         int qty = std::max( ( 0.5 - dmg ) * ( 0.5 - dmg) * p.ammo_remaining() / 10, 1.0 );
@@ -5860,29 +5860,14 @@ int vehicle::break_off( int p, int dmg )
 
 bool vehicle::explode_fuel( int p, damage_type type )
 {
-    const itype_id &ft = part_info(p).fuel_type;
-    struct fuel_explosion {
-        // TODO: Move the values below to jsons
-        int explosion_chance_hot ;
-        int explosion_chance_cold;
-        float explosion_factor;
-        bool fiery_explosion;
-        float fuel_size_factor;
-    };
-
-    static const std::map<itype_id, fuel_explosion> explosive_fuels = {{
-        { fuel_type_gasoline,   { 2, 5, 1.0f, true, 0.1f } },
-        { fuel_type_diesel,     { 20, 1000, 0.2f, false, 0.1f } }
-    }};
-
-    const auto iter = explosive_fuels.find( ft );
-    if( iter == explosive_fuels.end() ) {
-        // Not on the list means not explosive
+    const itype_id &ft = part_info( p ).fuel_type;
+    item fuel = item( ft );
+    if( !fuel.has_explosion_data() ) {
         return false;
     }
+    fuel_explosion data = fuel.get_explosion_data();
 
-    const fuel_explosion &data = iter->second;
-    const int pow = 120 * (1 - exp(data.explosion_factor / -5000 * (parts[p].ammo_remaining() * data.fuel_size_factor)));
+    const int pow = 120 * ( 1 - exp( data.explosion_factor / -5000 * ( parts[p].ammo_remaining() * data.fuel_size_factor ) ) );
     //debugmsg( "damage check dmg=%d pow=%d amount=%d", dmg, pow, parts[p].amount );
     if( parts[ p ].is_broken() ) {
         leak_fuel( parts[ p ] );
@@ -5892,7 +5877,7 @@ bool vehicle::explode_fuel( int p, damage_type type )
     if( one_in( explosion_chance ) ) {
         g->u.add_memorial_log(pgettext("memorial_male","The fuel tank of the %s exploded!"),
             pgettext("memorial_female", "The fuel tank of the %s exploded!"),
-            name.c_str());
+            name.c_str() );
         g->explosion( global_part_pos3( p ), pow, 0.7, data.fiery_explosion );
         mod_hp( parts[p], 0 - parts[ p ].hp(), DT_HEAT );
         parts[p].ammo_unset();

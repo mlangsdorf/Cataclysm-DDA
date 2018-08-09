@@ -573,6 +573,7 @@ Mods can modify this via `add:traits` and `remove:traits`.
                                *    bonus       = bonus granted; muffler = noise reduction%, seatbelt = bonus to not being thrown from vehicle
                                *    par1        = generic value used for unique bonuses, like the headlight's light intensity */
 "fuel_type": "NULL",          // (Optional, default = "NULL") Type of fuel/ammo the part consumes, as an item id
+
 "item": "wheel",              // The item used to install this part, and the item obtained when removing this part
 "difficulty": 4,              // Your mechanics skill must be at least this level to install this part
 "breaks_into" : [             // When the vehicle part is destroyed, items from this item group (see ITEM_SPAWN.md) will be spawned around the part on the ground.
@@ -585,7 +586,15 @@ Mods can modify this via `add:traits` and `remove:traits`.
 "damage_reduction" : {        // Flat reduction of damage, as described below. If not specified, set to zero
     "all" : 10,
     "physical" : 5
-}
+},
+                              // The following optional fields are specific to ENGINEs.
+"m2c": 50,                    // Mandatory field for parts with the ENGINE flag, indicates ratio of cruise power to maximum power
+"backfire_threshold": 0.5,    // Optional field, defaults to 0. If greater than 0, indicates minimum ratio of damaged to max HP to trigger backfires
+"backfire_freq": 20,          // Optional field unless backfire threshold > 0, then mandatory, defaults to 0. One in X chance of a backfire.
+"noise_factor": 15,           // Optional field, defaults to 0. Multiple engine power by this number to declare noise.
+"damaged_power_factor": 0.5,  // Optional field, defaults to 0. If more than 0, power when damage is scaled to power * ( damaged_power_factor + ( 1 - damaged_power_factor ) * ( damaged HP / max HP )
+"muscle_power_factor": 0,     // Optional field, defaults to 0. If more than 0, each point of the survivor's ST over 8 adds this much power to the engine.
+"exclusions": [ "souls" ]     // Optional field, defaults to empty. A list of words. A new engine can't be installed on an engine if any engine on the vehicle shares a word from exclusions.
 ```
 
 ### Part Resistance
