@@ -578,8 +578,8 @@ class vehicle
          * Split off split_parts into a new vehicle
          */
         bool will_split( int p ) const;
-        void split( std::vector<int> split_parts0, std::vector<int> split_parts1, std::vector<int> split_parts2 );
-        int find_split_parts( int split_part, std::vector<int> &split_part0, std::vector<int> &split_part1, std::vector<int> &split_part2 );
+        int find_split_parts( int split_part, std::vector<std::vector<int>> &new_vehs );
+        bool split( std::vector<std::vector<int>> new_vehs );
 
         /**
          * Set stat for part constrained by range [0,durability]

@@ -163,7 +163,7 @@ add_msg( "checking for potential split for #%d %s, %lu parts left", p, parts[p].
             int base_part = p ? 0 : 1;
             for( auto const &next_part : connected_parts ) {
                 if( !is_connected( parts[base_part], next_part, parts[p] ) ) {
-add_msg( "split because %s and %s aren't connected", parts[base_part].name().c_str(), next_part.name().c_str() );
+add_msg( "split because %d:%s and %s aren't connected", base_part, parts[base_part].name().c_str(), next_part.name().c_str() );
                     // There's no connection
                     return true;
                 }
@@ -173,8 +173,7 @@ add_msg( "split because %s and %s aren't connected", parts[base_part].name().c_s
     return false;
 }
 
-int vehicle::find_split_parts( int split_part, std::vector<int> &split_parts0, std::vector<int> &split_parts1,
-                               std::vector<int> &split_parts2 )
+int vehicle::find_split_parts( int split_part, std::vector<std::vector <int>> &split_parts )
 {
     constexpr int unfound_partval = 10;
     std::vector<int> all_parts;
@@ -196,6 +195,8 @@ int vehicle::find_split_parts( int split_part, std::vector<int> &split_parts0, s
             curveh = maxveh;
             all_parts[i] = curveh;
             maxveh += 1;
+            std::vector<int> newparts;
+            split_parts.push_back( newparts );
         }
         auto part_pos = parts[i].mount;
 
@@ -219,14 +220,13 @@ int vehicle::find_split_parts( int split_part, std::vector<int> &split_parts0, s
     // loop through the list of all parts, assign part numbers to the vectors
     for( size_t i = 0; i < parts.size(); i++ ) {
         // parts in the "original" vehicle have all_parts == -1 and can be skipped
-        if( i == ( size_t )split_part ) {
+        if( all_parts[ i ] < 0 ) {
             continue;
-        } else if( all_parts[i] == 0 ) {
-            split_parts0.push_back( i );
-        } else if( all_parts[i] == 1 ) {
-            split_parts1.push_back( i );
-        } else if( all_parts[i] == 2 ) {
-            split_parts2.push_back( i );
+        } else if( static_cast<size_t>( all_parts[ i ] ) >= split_parts.size() ) {
+            debugmsg( "split part %lu has vehicle number %d but only %lu new vehicles", i, all_parts[i], split_parts.size() );
+            continue;
+        } else {
+            split_parts[ all_parts[ i ] ].push_back( i );
         }
     }
     return maxveh + 1;
@@ -238,12 +238,15 @@ int vehicle::find_split_parts( int split_part, std::vector<int> &split_parts0, s
 // some of the logic borrowed from remove_part
 // skipped the grab, curtain, player activity, and engine checks because they deal
 // with pos, not a vehicle pointer
-void vehicle::split( std::vector<int> split_parts0, std::vector<int> split_parts1, std::vector<int> split_parts2 )
+bool vehicle::split( std::vector<std::vector <int>> new_vehs )
 {
-    const auto hack_split = [&]( std::vector<int> split_parts ) {
+    bool did_split = false;
+    for( auto split_parts : new_vehs ) {
         if( split_parts.empty() ) {
-            return false;
+            continue;
         }
+        did_split = true;
+
         vehicle *new_vehicle = g->m.add_vehicle( vproto_id( "none" ), global_pos3(), face.dir() );
         new_vehicle->name = name;
         new_vehicle->face = face;
@@ -298,17 +301,8 @@ void vehicle::split( std::vector<int> split_parts0, std::vector<int> split_parts
         g->m.dirty_vehicle_list.insert( new_vehicle );
         new_vehicle->refresh();
         new_vehicle->shift_if_needed();
-        return true;
-    };
-    bool did_split = false;
-    did_split |= hack_split( split_parts0 );
-    did_split |= hack_split( split_parts1 );
-    did_split |= hack_split( split_parts2 );
-    if( did_split ) {
-        g->m.dirty_vehicle_list.insert( this );
-        refresh();
-        shift_if_needed();
     }
+    return did_split;
 }
 
 void vehicle::set_hp( vehicle_part &pt, int qty )
@@ -2255,13 +2249,13 @@ bool vehicle::remove_part( int p )
 
     /* split the vehicle if removing the part would split the vehicle.
      */
-    if( will_split( p ) ) {
+    const bool needs_to_split = will_split( p );
+    bool did_split = false;
+    if( needs_to_split ) {
         add_msg( m_info, "removing part%d: %s split the vehicle!", p, parts[p].name().c_str() );
-        std::vector<int> newveh0;
-        std::vector<int> newveh1;
-        std::vector<int> newveh2;
-        find_split_parts( p, newveh0, newveh1, newveh2 );
-        split( newveh0, newveh1, newveh2 );
+        std::vector<std::vector <int>> new_vehs;
+        find_split_parts( p, new_vehs );
+        did_split = split( new_vehs );
     }
 
     parts[p].removed = true;
@@ -2301,6 +2295,12 @@ bool vehicle::remove_part( int p )
         g->m.add_item_or_charges( dest, i );
     }
 
+    if( did_split ) {
+        g->m.dirty_vehicle_list.insert( this );
+        part_removal_cleanup();
+        // part removal cleanup called shift_if_needed, so no need to call again
+        return false;
+    }
     g->m.dirty_vehicle_list.insert( this );
     refresh();
     return shift_if_needed();

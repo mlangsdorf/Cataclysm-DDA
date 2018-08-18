@@ -14,7 +14,7 @@ TEST_CASE( "vehicle_split_section" )
     g->u.setpos( test_origin );
     tripoint vehicle_origin = test_origin + tripoint( 1, 1, 0 );
 
-    vehicle *veh_ptr = g->m.add_vehicle( vproto_id( "split_test" ), vehicle_origin, -90 );
+    vehicle *veh_ptr = g->m.add_vehicle( vproto_id( "split_test" ), vehicle_origin, -30 );
     REQUIRE( veh_ptr != nullptr );
     VehicleList vehs = g->m.get_vehicles();
     REQUIRE( vehs.size() == 1 );
@@ -27,36 +27,21 @@ TEST_CASE( "vehicle_split_section" )
                     vpart_pos.x, vpart_pos.y );
             }
     }
-    tripoint grab_point = test_origin + tripoint( -1, -1, 0 );
-    g->u.grab_type = OBJECT_VEHICLE;
-    g->u.grab_point = grab_point;
+//    tripoint grab_point = test_origin + tripoint( -1, -1, 0 );
+//    g->u.grab_type = OBJECT_VEHICLE;
+//    g->u.grab_point = grab_point;
 
-    tripoint break_point = test_origin + tripoint( 3, 1, 0 );
+    CHECK( veh_ptr->parts.size() == 192 );
+
+    tripoint break_point = test_origin + tripoint( 1, 3, 0 );
     g->m.destroy( break_point );
-    std::vector<int> split_parts0;
-    std::vector<int> split_parts1;
-    std::vector<int> split_parts2;
-    int vehcnt = veh_ptr->find_split_parts( 2, split_parts0, split_parts1, split_parts2 );
-    printf( "there are now %d new vehicles\n", vehcnt );
-
-    const auto print_parts = [&]( std::vector<int> vehparts ) {
-        printf( "New vehicle consists of parts: ");
-        for( auto splitpart: vehparts ) {
-            printf( "%2d ", splitpart );
-        }
-        printf( "\n" );
-    };
-
-    print_parts( split_parts0 );
-    print_parts( split_parts1 );
-    print_parts( split_parts2 );
-
-    veh_ptr->split( split_parts0, split_parts1, split_parts2 );
 
     g->m.vehmove();
     vehs = g->m.get_vehicles();
     CHECK( vehs.size() == 4 );
 
+    int cnt7 = 0;
+    int cnt170 = 0;
     for( auto &vehs_v : vehs ) {
         if( vehs_v.v == veh_ptr ) {
             printf( "original vehicle\n" );
@@ -65,14 +50,23 @@ TEST_CASE( "vehicle_split_section" )
             printf( "\n\nparts of a vehicle\n" );
         }
         int i = 0;
+        CHECK( ( ( vehs_v.v->parts.size() == 7 ) || ( vehs_v.v->parts.size() == 170 ) ) );
+        if( vehs_v.v->parts.size() == 7 ) {
+            cnt7 += 1;
+        } else if ( vehs_v.v->parts.size() == 170 ) {
+            cnt170 += 1;
+        }
         for( auto &vpart : vehs_v.v->parts ) {
             tripoint vpart_pos = vehs_v.v->global_part_pos3( vpart );
             printf( "\tpart %d: %s @ %d:%d\n", i++, vpart.info().name().c_str(),
                     vpart_pos.x, vpart_pos.y );
             }
     }
-    CHECK( g->u.grab_type == OBJECT_VEHICLE);
-    CHECK( g->u.grab_point == grab_point );
+    CHECK( cnt7 == 3 );
+    CHECK( cnt170 == 1 );
+
+//    CHECK( g->u.grab_type == OBJECT_VEHICLE);
+//    CHECK( g->u.grab_point == grab_point );
 
     printf( "\n\tvehicle split test completed successfully\n\n" );
 }

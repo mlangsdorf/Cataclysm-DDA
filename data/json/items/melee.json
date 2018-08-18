@@ -386,6 +386,23 @@
   },
   {
     "type": "GENERIC",
+    "id": "hammer_wrecker",
+    "name": "wrecker hammer",
+    "description": "A large, heavy hammer.  Makes an acceptable melee weapon for the very strong, but is nearly useless in the hands of the weak.  Cheatmiccheat weapon for vehicle testing.",
+    "looks_like": "mjolnir",
+    "weight": 45,
+    "color": "brown",
+    "symbol": "/",
+    "material": [ "wood", "steel" ],
+    "flags": "NONCONDUCTIVE",
+    "techniques": [ "WBLOCK_1", "BRUTAL", "WIDE", "SWEEP" ],
+    "volume": 1,
+    "bashing": 400,
+    "price": 12000,
+    "qualities": [ [ "HAMMER", 1 ] ]
+  },
+  {
+    "type": "GENERIC",
     "id": "warhammer",
     "name": "war hammer",
     "description": "A medieval hammer made for battle.  Its odd shape and balance make it an excellent weapon, but an ineffective tool.",
