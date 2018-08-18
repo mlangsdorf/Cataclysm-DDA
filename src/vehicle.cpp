@@ -141,17 +141,16 @@ bool vehicle::will_split( int p ) const
     int dy = parts[p].mount.y;
 
     std::vector<int> parts_in_square = parts_at_relative(dx, dy, false);
-add_msg( "checking for potential split for #%d %s, %lu parts left", p, parts[p].name().c_str(), parts_in_square.size() );
     if( parts_in_square.size() == 1 ) {
-        add_msg("last part in square" );
+add_msg( "checking for potential split for #%d %s, %lu parts left", p, parts[p].name().c_str(), parts_in_square.size() );
 
-        std::vector<vehicle_part> connected_parts;
+        std::vector<int> connected_parts;
         for( int i = 0; i < 4; i++ ) {
             int next_x = i < 2 ? ( i == 0 ? -1 : 1 ) : 0;
             int next_y = i < 2 ? 0 : ( i == 2 ? -1 : 1 );
             std::vector<int> parts_over_there = parts_at_relative( dx + next_x, dy + next_y, false );
             if( !parts_over_there.empty() ) {
-                connected_parts.push_back( parts[parts_over_there[0]] );
+                connected_parts.push_back( parts_over_there[0] );
             }
         }
         /* If size = 0, it's the last part of the whole vehicle, so no split
@@ -162,8 +161,8 @@ add_msg( "checking for potential split for #%d %s, %lu parts left", p, parts[p].
              */
             int base_part = p ? 0 : 1;
             for( auto const &next_part : connected_parts ) {
-                if( !is_connected( parts[base_part], next_part, parts[p] ) ) {
-add_msg( "split because %d:%s and %s aren't connected", base_part, parts[base_part].name().c_str(), next_part.name().c_str() );
+                if( !is_connected( parts[base_part], parts[next_part], parts[p] ) ) {
+add_msg( "split because %d:%s and %d:%s aren't connected", base_part, parts[base_part].name().c_str(), next_part, parts[next_part].name().c_str() );
                     // There's no connection
                     return true;
                 }
@@ -265,7 +264,7 @@ bool vehicle::split( std::vector<std::vector <int>> new_vehs )
                 }
             }
 
-    #if 0
+#if 0
             // remove labels associated with the mov_part
             std::string label_str;
             const auto iter = labels.find( label( parts[ mov_part ].mount.x, parts[ mov_part ].mount.y ) );
@@ -279,7 +278,7 @@ bool vehicle::split( std::vector<std::vector <int>> new_vehs )
                     }
                 }
             }
-    #endif
+#endif
 
             // transfer the vehicle_part to the new vehicle
             new_vehicle->parts.emplace_back( parts[ mov_part ] );
@@ -287,12 +286,12 @@ bool vehicle::split( std::vector<std::vector <int>> new_vehs )
             if( passenger ) {
                 g->m.board_vehicle( passenger->pos(), passenger );
             }
-    #if 0
+#if 0
             // add the label to the new vehicle
             if( !label_str.empty() ) {
                 // vpart_position comes from where? WTF.
             }
-    #endif
+#endif
 
             // indicate the part needs to be removed from the old vehicle
             parts[ mov_part].removed = true;
@@ -2252,7 +2251,6 @@ bool vehicle::remove_part( int p )
     const bool needs_to_split = will_split( p );
     bool did_split = false;
     if( needs_to_split ) {
-        add_msg( m_info, "removing part%d: %s split the vehicle!", p, parts[p].name().c_str() );
         std::vector<std::vector <int>> new_vehs;
         find_split_parts( p, new_vehs );
         did_split = split( new_vehs );
