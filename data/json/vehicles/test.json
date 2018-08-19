@@ -2,7 +2,7 @@
   {
     "id": "split_test",
     "type": "vehicle",
-    "name": "test cross",
+    "name": "Split Cross Test Vehicle",
     "//": "Don't remove this vehicle definition!",
     "blueprint": [
       " vvv ",
@@ -206,6 +206,53 @@
       { "x":  2, "y": 15, "part": "plating_military" },
       { "x":  -2, "y": 16, "part": "external_tank" },
       { "x":  2, "y": 16, "part": "external_tank" }
+    ]
+  },
+  {
+    "id": "split_test2",
+    "type": "vehicle",
+    "name": "Split Box Test Vehicle",
+    "//": "Don't remove this vehicle definition!",
+    "blueprint": [
+      "HHHhHH",
+      "HHHhHH",
+      "hhhhhh",
+      "HHHhHH",
+      "HHHhHH"
+    ],
+    "parts": [
+
+
+      { "x": 0, "y": 0, "part": "folding_wooden_frame" },
+      { "x": 1, "y": 0, "part": "folding_wooden_frame" },
+      { "x": 2, "y": 0, "part": "folding_wooden_frame" },
+      { "x": 3, "y": 0, "part": "folding_wooden_frame" },
+      { "x": -1, "y": 0, "part": "folding_wooden_frame" },
+      { "x": -2, "y": 0, "part": "folding_wooden_frame" },
+      { "x": 0, "y": -1, "part": "folding_wooden_frame" },
+      { "x": 0, "y": -2, "part": "folding_wooden_frame" },
+      { "x": 0, "y": 1, "part": "folding_wooden_frame" },
+      { "x": 0, "y": 2, "part": "folding_wooden_frame" },
+      { "x": 1, "y": -1, "part": "hdframe_cross" },
+      { "x": 2, "y": -1, "part": "hdframe_cross" },
+      { "x": 3, "y": -1, "part": "hdframe_cross" },
+      { "x": 1, "y": -2, "part": "hdframe_cross" },
+      { "x": 2, "y": -2, "part": "hdframe_cross" },
+      { "x": 3, "y": -2, "part": "hdframe_cross" },
+      { "x": 1, "y": 1, "part": "hdframe_vertical_2" },
+      { "x": 2, "y": 1, "part": "hdframe_vertical_2" },
+      { "x": 3, "y": 1, "part": "hdframe_vertical_2" },
+      { "x": 1, "y": 2, "part": "hdframe_vertical_2" },
+      { "x": 2, "y": 2, "part": "hdframe_vertical_2" },
+      { "x": 3, "y": 2, "part": "hdframe_vertical_2" },
+      { "x": -1, "y": 1, "part": "hdframe_vertical" },
+      { "x": -2, "y": 1, "part": "hdframe_vertical" },
+      { "x": -1, "y": 2, "part": "hdframe_vertical" },
+      { "x": -2, "y": 2, "part": "hdframe_vertical" },
+      { "x": -1, "y": -1, "part": "hdframe_horizontal" },
+      { "x": -2, "y": -1, "part": "hdframe_horizontal" },
+      { "x": -1, "y": -2, "part": "hdframe_horizontal" },
+      { "x": -2, "y": -2, "part": "hdframe_horizontal" }
     ]
   }
 ]

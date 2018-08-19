@@ -159,10 +159,12 @@ add_msg( "checking for potential split for #%d %s, %lu parts left", p, parts[p].
             /* We'll take parts[0] to be the target part, unless p is 0. If any of the
              * neighbors doesn't have a connection, then something needs to split.
              */
-            int base_part = p ? 0 : 1;
+            int base_part;
+            for( base_part = 0 ; parts[ base_part].removed && ( size_t )base_part < parts.size() ; base_part++ )
+                ;
             for( auto const &next_part : connected_parts ) {
                 if( !is_connected( parts[base_part], parts[next_part], parts[p] ) ) {
-add_msg( "split because %d:%s and %d:%s aren't connected", base_part, parts[base_part].name().c_str(), next_part, parts[next_part].name().c_str() );
+add_msg( "%s will split because %d:%s and %d:%s aren't connected", name.c_str(), base_part, parts[base_part].name().c_str(), next_part, parts[next_part].name().c_str() );
                     // There's no connection
                     return true;
                 }
@@ -188,7 +190,12 @@ int vehicle::find_split_parts( int split_part, std::vector<std::vector <int>> &s
     for( size_t i = 0; i < parts.size(); i++ ) {
         if( checked_parts[ i ] ) {
             continue;
+        } else if ( parts[ i ].removed ) {
+            all_parts[ i ] = -unfound_partval;
+            checked_parts[ i ] = true;
+            continue;
         }
+            
         curveh = all_parts[i];
         if( curveh == unfound_partval ) {
             curveh = maxveh;
@@ -240,6 +247,7 @@ int vehicle::find_split_parts( int split_part, std::vector<std::vector <int>> &s
 bool vehicle::split( std::vector<std::vector <int>> new_vehs )
 {
     bool did_split = false;
+    int i = 1;
     for( auto split_parts : new_vehs ) {
         if( split_parts.empty() ) {
             continue;
@@ -247,7 +255,7 @@ bool vehicle::split( std::vector<std::vector <int>> new_vehs )
         did_split = true;
 
         vehicle *new_vehicle = g->m.add_vehicle( vproto_id( "none" ), global_pos3(), face.dir() );
-        new_vehicle->name = name;
+        new_vehicle->name = string_format( "Part #%d of %s", i++, name.c_str() );
         new_vehicle->face = face;
         new_vehicle->move = move;
 
@@ -2294,6 +2302,7 @@ bool vehicle::remove_part( int p )
     }
 
     if( did_split ) {
+        name = string_format( "Wreckage of %s", name );
         g->m.dirty_vehicle_list.insert( this );
         part_removal_cleanup();
         // part removal cleanup called shift_if_needed, so no need to call again
