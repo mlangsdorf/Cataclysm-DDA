@@ -575,6 +575,13 @@ class vehicle
         ~vehicle();
 
         /**
+         * Split off split_parts into a new vehicle
+         */
+        bool will_split( int p ) const;
+        int find_split_parts( int split_part, std::vector<std::vector<int>> &new_vehs );
+        bool split( std::vector<std::vector<int>> new_vehs );
+
+        /**
          * Set stat for part constrained by range [0,durability]
          * @note does not invoke base @ref item::on_damage callback
          */

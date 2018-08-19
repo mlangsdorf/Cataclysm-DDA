@@ -127,6 +127,213 @@ vehicle::vehicle() : vehicle( vproto_id() )
 
 vehicle::~vehicle() = default;
 
+bool vehicle::will_split( int p ) const
+{
+    if( p < 0 || p > ( int )parts.size() ) {
+        return false;
+    }
+    const vpart_info &p_info = part_info( p, true );
+    if( p_info.location != part_location_structure ) {
+        return false;
+    }
+
+    int dx = parts[p].mount.x;
+    int dy = parts[p].mount.y;
+
+    std::vector<int> parts_in_square = parts_at_relative(dx, dy, false);
+    if( parts_in_square.size() <= 1 ) {
+        std::vector<int> connected_parts;
+        for( int i = 0; i < 4; i++ ) {
+            int next_x = i < 2 ? ( i == 0 ? -1 : 1 ) : 0;
+            int next_y = i < 2 ? 0 : ( i == 2 ? -1 : 1 );
+            std::vector<int> parts_over_there = parts_at_relative( dx + next_x, dy + next_y, false );
+            if( !parts_over_there.empty() ) {
+                connected_parts.push_back( parts_over_there[0] );
+            }
+        }
+        /* If size = 0, it's the last part of the whole vehicle, so no split
+            * Otherwise, it gets complicated... */
+        if( !connected_parts.empty() ) {
+            /* We'll take parts[0] to be the target part, unless p is 0. If any of the
+             * neighbors doesn't have a connection, then something needs to split.
+             */
+            int base_part;
+            for( base_part = 0 ; parts[ base_part].removed && ( size_t )base_part < parts.size() ; base_part++ )
+                ;
+            for( auto const &next_part : connected_parts ) {
+                if( !is_connected( parts[base_part], parts[next_part], parts[p] ) ) {
+add_msg( "%s will split because %d:%s and %d:%s aren't connected", name.c_str(), base_part, parts[base_part].name().c_str(), next_part, parts[next_part].name().c_str() );
+                    // There's no connection
+                    return true;
+                }
+            }
+        }
+    }
+    return false;
+}
+
+int vehicle::find_split_parts( int split_part, std::vector<std::vector <int>> &split_parts )
+{
+    constexpr int unfound_partval = 10;
+    std::vector<int> all_parts;
+    std::vector<bool> checked_parts;
+    //int part = 0;
+    int curveh = -1;
+    int maxveh = -1;
+    all_parts.assign( parts.size(), unfound_partval );
+    checked_parts.assign( parts.size(), false );
+
+    // naive implementation: sequence through part list. if a part isn't found, assign it to
+    // current maxveh, increment max vehicle count, assign it's curveh to all the neighbors,
+    // interate through.
+    // obvious difficult: part1 and part5 are connected, but not neighbors - they connected
+    // via a chain of part 9, 12, and 15. they'll get different curvehs and will error out.
+    // epicycle solution: record the first part in each newveh, confirm they're actually
+    // different vehicles
+    std::vector<int> first_parts;
+    all_parts[ split_part ] = -unfound_partval;
+    checked_parts[ split_part ] = true;
+    for( size_t i = 0; i < parts.size(); i++ ) {
+        if( checked_parts[ i ] ) {
+            continue;
+        } else if ( parts[ i ].removed ) {
+            all_parts[ i ] = -unfound_partval;
+            checked_parts[ i ] = true;
+            continue;
+        }
+            
+        curveh = all_parts[i];
+        if( curveh == unfound_partval ) {
+            // check that we're not connected to another subvehicle
+            add_msg("checking part %lu, maxveh %d", i, maxveh);
+            bool is_new_vehicle = true;
+            for( auto first_part: first_parts ) {
+                add_msg("comparing to part %d", first_part);
+                if( is_connected( parts[ i ], parts[ first_part ], parts[ split_part ] ) ) {
+                    add_msg("part %lu is in vehicle %d", i, all_parts[ first_part ]);
+                    is_new_vehicle = false;
+                    curveh = all_parts[ first_part ];
+                    break;
+                }
+            }
+            if( is_new_vehicle ) {
+                curveh = maxveh;
+                maxveh += 1;
+                first_parts.push_back( i );
+                std::vector<int> newparts;
+                split_parts.push_back( newparts );
+                add_msg("part %lu is in a new vehicle %d", i, maxveh);
+            }
+            all_parts[i] = curveh;
+        }
+        auto part_pos = parts[i].mount;
+
+        std::vector<int> parts_here = parts_at_relative( part_pos.x, part_pos.y );
+        for( auto same_tile : parts_here ) {
+            all_parts[ same_tile ] = curveh;
+            checked_parts[ same_tile ] = true;
+        }
+
+        for(int i = 0; i < 4; i++) {
+            point next( part_pos.x + ( i < 2 ? ( i == 0 ? -1 : 1 ) : 0 ),
+                        part_pos.y + ( i < 2 ? 0 : ( i == 2 ? -1 : 1 ) ) );
+            std::vector<int> parts_there = parts_at_relative( next.x, next.y );
+            for( auto neighbor_part : parts_there ) {
+                all_parts[ neighbor_part ] = curveh;
+            }
+        }
+        checked_parts[ i ] = true;
+    }
+
+    // loop through the list of all parts, assign part numbers to the vectors
+    for( size_t i = 0; i < parts.size(); i++ ) {
+        // parts in the "original" vehicle have all_parts == -1 and can be skipped
+        if( all_parts[ i ] < 0 ) {
+            continue;
+        } else if( static_cast<size_t>( all_parts[ i ] ) >= split_parts.size() ) {
+            debugmsg( "split part %lu has vehicle number %d but only %lu new vehicles", i, all_parts[i], split_parts.size() );
+            continue;
+        } else {
+            split_parts[ all_parts[ i ] ].push_back( i );
+        }
+    }
+    return maxveh + 1;
+}
+
+// Split a vehicle into an old vehicle and a new vehicle by moving vehicle_parts from one
+// to the other.
+// @param split_parts vector of part indexes to move to a new vehicle
+// some of the logic borrowed from remove_part
+// skipped the grab, curtain, player activity, and engine checks because they deal
+// with pos, not a vehicle pointer
+bool vehicle::split( std::vector<std::vector <int>> new_vehs )
+{
+    bool did_split = false;
+    int i = 0;
+    for( auto split_parts : new_vehs ) {
+        if( split_parts.empty() ) {
+            continue;
+        }
+        did_split = true;
+
+        vehicle *new_vehicle = g->m.add_vehicle( vproto_id( "none" ), global_pos3(), face.dir() );
+        new_vehicle->name = string_format( "Part #%d of %s", i++, name.c_str() );
+        new_vehicle->face = face;
+        new_vehicle->move = move;
+
+        for( auto &mov_part: split_parts ) {
+            player *passenger = nullptr;
+            // Unboard any entities standing on any transferred part
+            if( part_flag( mov_part, "BOARDABLE" ) ) {
+                std::vector<int> bp = boarded_parts();
+                for( auto &elem : bp ) {
+                    if( elem == mov_part ) {
+                        passenger = get_passenger( mov_part );
+                        g->m.unboard_vehicle( passenger->pos() );
+                    }
+                }
+            }
+
+#if 0
+            // remove labels associated with the mov_part
+            std::string label_str;
+            const auto iter = labels.find( label( parts[ mov_part ].mount.x, parts[ mov_part ].mount.y ) );
+            const bool mv_label = iter != labels.end();
+            // Checking these twice to avoid calling the relatively expensive parts_at_relative() unnecessarily.
+            if( mv_label ) {
+                if( parts_at_relative( parts[ mov_part ].mount.x, parts[ mov_part ].mount.y, false ).empty() ) {
+                    if( mv_label ) {
+                        label_str = iter.begin().text;
+                        labels.erase( iter );
+                    }
+                }
+            }
+#endif
+
+            // transfer the vehicle_part to the new vehicle
+            new_vehicle->parts.emplace_back( parts[ mov_part ] );
+            // put the passenger on the new vehicle
+            if( passenger ) {
+                g->m.board_vehicle( passenger->pos(), passenger );
+            }
+#if 0
+            // add the label to the new vehicle
+            if( !label_str.empty() ) {
+                // vpart_position comes from where? WTF.
+            }
+#endif
+
+            // indicate the part needs to be removed from the old vehicle
+            parts[ mov_part].removed = true;
+            removed_part_count++;
+        }
+        g->m.dirty_vehicle_list.insert( new_vehicle );
+        new_vehicle->refresh();
+        new_vehicle->shift_if_needed();
+    }
+    return did_split;
+}
+
 void vehicle::set_hp( vehicle_part &pt, int qty )
 {
     if( qty == pt.info().durability ) {
@@ -1796,7 +2003,7 @@ bool vehicle::can_mount(int const dx, int const dy, const vpart_id &id) const
     return true;
 }
 
-bool vehicle::can_unmount(int const p) const
+bool vehicle::can_unmount( int const p ) const
 {
     if(p < 0 || p > (int)parts.size()) {
         return false;
@@ -1837,7 +2044,6 @@ bool vehicle::can_unmount(int const p) const
 
     //Structural parts have extra requirements
     if(part_info(p).location == part_location_structure) {
-
         std::vector<int> parts_in_square = parts_at_relative(dx, dy, false);
         /* To remove a structural part, there can be only structural parts left
          * in that square (might be more than one in the case of wreckage) */
@@ -1845,49 +2051,6 @@ bool vehicle::can_unmount(int const p) const
             if( part_info( elem ).location != part_location_structure ) {
                 return false;
             }
-        }
-
-        //If it's the last part in the square...
-        if(parts_in_square.size() == 1) {
-
-            /* This is the tricky part: We can't remove a part that would cause
-             * the vehicle to 'break into two' (like removing the middle section
-             * of a quad bike, for instance). This basically requires doing some
-             * breadth-first searches to ensure previously connected parts are
-             * still connected. */
-
-            //First, find all the squares connected to the one we're removing
-            std::vector<vehicle_part> connected_parts;
-
-            for(int i = 0; i < 4; i++) {
-                int next_x = i < 2 ? (i == 0 ? -1 : 1) : 0;
-                int next_y = i < 2 ? 0 : (i == 2 ? -1 : 1);
-                std::vector<int> parts_over_there = parts_at_relative(dx + next_x, dy + next_y, false);
-                //Ignore empty squares
-                if(!parts_over_there.empty()) {
-                    //Just need one part from the square to track the x/y
-                    connected_parts.push_back(parts[parts_over_there[0]]);
-                }
-            }
-
-            /* If size = 0, it's the last part of the whole vehicle, so we're OK
-             * If size = 1, it's one protruding part (ie, bicycle wheel), so OK
-             * Otherwise, it gets complicated... */
-            if(connected_parts.size() > 1) {
-
-                /* We'll take connected_parts[0] to be the target part.
-                 * Every other part must have some path (that doesn't involve
-                 * the part about to be removed) to the target part, in order
-                 * for the part to be legally removable. */
-                for(auto const &next_part : connected_parts) {
-                    if(!is_connected(connected_parts[0], next_part, parts[p])) {
-                        //Removing that part would break the vehicle in two
-                        return false;
-                    }
-                }
-
-            }
-
         }
     }
     //Anything not explicitly denied is permitted
@@ -2113,9 +2276,19 @@ bool vehicle::remove_part( int p )
         }
     }
 
-    parts[p].removed = true;
-    removed_part_count++;
+    /* split the vehicle if removing the part would split the vehicle.
+     */
+    const bool needs_to_split = will_split( p );
+    bool did_split = false;
+    if( needs_to_split ) {
+        std::vector<std::vector <int>> new_vehs;
+        find_split_parts( p, new_vehs );
+        did_split = split( new_vehs );
+    }
 
+    parts[p].removed = true;
+    removed_part_count++;  
+    
     // If the player is currently working on the removed part, stop them as it's futile now.
     const player_activity &act = g->u.activity;
     if( act.id() == activity_id( "ACT_VEHICLE" ) && act.moves_left > 0 && act.values.size() > 6 ) {
@@ -2148,6 +2321,14 @@ bool vehicle::remove_part( int p )
         // Note: this can spawn items on the other side of the wall!
         tripoint dest( part_loc.x + rng( -3, 3 ), part_loc.y + rng( -3, 3 ), smz );
         g->m.add_item_or_charges( dest, i );
+    }
+
+    if( did_split ) {
+        name = string_format( "Wreckage of %s", name );
+        g->m.dirty_vehicle_list.insert( this );
+        part_removal_cleanup();
+        // part removal cleanup called shift_if_needed, so no need to call again
+        return false;
     }
     g->m.dirty_vehicle_list.insert( this );
     refresh();
@@ -5826,11 +6007,7 @@ int vehicle::break_off( int p, int dmg )
             }
             remove_part( parts_in_square[index] );
         }
-        /* After clearing the frame, remove it if normally legal to do
-         * so (it's not holding the vehicle together). At a later date,
-         * some more complicated system (such as actually making two
-         * vehicles from the split parts) would be ideal. */
-        if( can_unmount(p) ) {
+        if( can_unmount( p ) ) {
             if( g->u.sees( pos ) ) {
                 add_msg(m_bad, _("The %1$s's %2$s is destroyed!"),
                         name.c_str(), parts[ p ].name().c_str() );
