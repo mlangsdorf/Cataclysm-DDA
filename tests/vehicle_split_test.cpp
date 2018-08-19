@@ -50,7 +50,7 @@ TEST_CASE( "vehicle_split_section" )
     tripoint test_origin( 30, 30, 0 );
     g->u.setpos( test_origin );
     int test_cnt = 0;
-    for( int dir = -300; dir < 330; dir += 30 ) {
+    for( int dir = 0; dir < 30; dir += 30 ) {
         test_cnt += 1;
         clear_game();
         tripoint vehicle_origin = test_origin + tripoint( 1, 1, 0 );

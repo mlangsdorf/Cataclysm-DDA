@@ -221,8 +221,6 @@
       "HHHhHH"
     ],
     "parts": [
-
-
       { "x": 0, "y": 0, "part": "folding_wooden_frame" },
       { "x": 1, "y": 0, "part": "folding_wooden_frame" },
       { "x": 2, "y": 0, "part": "folding_wooden_frame" },
@@ -252,7 +250,45 @@
       { "x": -1, "y": -1, "part": "hdframe_horizontal" },
       { "x": -2, "y": -1, "part": "hdframe_horizontal" },
       { "x": -1, "y": -2, "part": "hdframe_horizontal" },
-      { "x": -2, "y": -2, "part": "hdframe_horizontal" }
+      { "x": -2, "y": -2, "part": "hdframe_horizontal" },
+      { "x": 1, "y": -1, "part": "hdhalfboard_vertical" },
+      { "x": 2, "y": -1, "part": "hdhalfboard_vertical" },
+      { "x": 3, "y": -1, "part": "hdhalfboard_sw" },
+      { "x": 1, "y": -2, "part": "hdhalfboard_vertical" },
+      { "x": 2, "y": -2, "part": "seat" },
+      { "x": 2, "y": -2, "part": "controls" },
+      { "x": 3, "y": -2, "part": "diesel_engine_i6" },
+      { "x": 3, "y": -2, "part": "battery_car" },
+      { "x": 3, "y": -2, "part": "tank_small", "fuel": "diesel" },
+      { "x": 3, "y": -2, "part": "alternator_truck" },
+      { "x": 1, "y": -1, "part": "plating_military" },
+      { "x": 2, "y": -1, "part": "plating_military" },
+      { "x": 3, "y": -1, "part": "plating_military" },
+      { "x": 1, "y": -2, "part": "plating_military" },
+      { "x": 1, "y": 1, "part": "hdhalfboard_vertical" },
+      { "x": 2, "y": 1, "part": "hdhalfboard_vertical" },
+      { "x": 3, "y": 1, "part": "hdhalfboard_se" },
+      { "x": 1, "y": 2, "part": "hdhalfboard_vertical" },
+      { "x": 1, "y": -1, "part": "wheel_armor_steerable" },
+      { "x": 2, "y": -1, "part": "wheel_armor_steerable" },
+      { "x": 3, "y": -1, "part": "wheel_armor_steerable" },
+      { "x": 1, "y": -2, "part": "wheel_armor_steerable" },
+      { "x": 2, "y": -2, "part": "wheel_armor_steerable" },
+      { "x": 3, "y": -2, "part": "wheel_armor_steerable" },
+      { "x": 1, "y": 1, "part": "wheel_armor_steerable" },
+      { "x": 2, "y": 1, "part": "wheel_armor_steerable" },
+      { "x": 3, "y": 1, "part": "wheel_armor_steerable" },
+      { "x": 1, "y": 2, "part": "wheel_armor_steerable" },
+      { "x": 2, "y": 2, "part": "wheel_armor_steerable" },
+      { "x": 3, "y": 2, "part": "wheel_armor_steerable" },
+      { "x": -1, "y": -1, "part": "wheel_armor_steerable" },
+      { "x": -2, "y": -1, "part": "wheel_armor_steerable" },
+      { "x": -1, "y": -2, "part": "wheel_armor_steerable" },
+      { "x": -2, "y": -2, "part": "wheel_armor_steerable" },
+      { "x": -1, "y": 1, "part": "wheel_armor_steerable" },
+      { "x": -2, "y": 1, "part": "wheel_armor_steerable" },
+      { "x": -1, "y": 2, "part": "wheel_armor_steerable" },
+      { "x": -2, "y": 2, "part": "wheel_armor_steerable" }
     ]
   }
 ]
