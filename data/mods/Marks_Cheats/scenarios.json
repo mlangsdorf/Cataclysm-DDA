@@ -1,0 +1,18 @@
+[
+  {
+    "type": "start_location",
+    "ident": "survivor_base",
+    "name": "Survior Base",
+    "target": "survivor_base"
+  },
+  {
+    "type": "scenario",
+    "ident": "prepared_survivor",
+    "name": "Prepared Survivor",
+    "points": 150,
+    "description": "You knew the end was coming.  You spent all your money on a fortified ranch and awaited the end.  Now the end has come.",
+    "allowed_locs": [ "survivor_base" ],
+    "start_name": "Survior Base",
+    "professions": [ "bionic_prepper_super", "super_test_guy" ]
+  }
+]

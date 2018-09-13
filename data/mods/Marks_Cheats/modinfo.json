@@ -1,0 +1,11 @@
+[
+  {
+    "type": "MOD_INFO",
+    "ident": "Mark's Cheats",
+    "name": "Mark's Cheats",
+    "authors": [ "Mark Langsdorf" ],
+    "description": "Cheaty McCheater stuff",
+    "category": "items",
+    "dependencies": [ "dda" ]
+  }
+]
