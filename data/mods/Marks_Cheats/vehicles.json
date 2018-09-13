@@ -1,0 +1,175 @@
+[
+  {
+    "id": "survivor_rv",
+    "type": "vehicle",
+    "name": "Early Survivor Vehicle",
+    "parts": [
+      { "x": -3, "y": 2, "parts": [ "hdframe_se", "reinforced_windshield", "v_curtain", "door_motor", "roof", "plating_steel" ] },
+      { "x": -3, "y": 1, "parts": [ "hdframe_horizontal", "hdstowboard_horizontal", "roof", "plating_steel" ] },
+      { "x": -3, "y": 0, "parts": [ "hdframe_horizontal", "hddoor", "plating_steel", "roof", "v_curtain", "door_motor" ] },
+      { "x": -3, "y": -1, "parts": [ "hdframe_horizontal", "hdstowboard_horizontal", "roof", "plating_steel" ] },
+      { "x": -3, "y": -2, "parts": [ "hdframe_sw", "reinforced_windshield", "v_curtain", "door_motor", "roof", "plating_steel" ] },
+      { "x": -2, "y": 2, "parts": [ "hdframe_vertical", "reinforced_windshield", "v_curtain", "door_motor", "plating_steel", "roof" ] },
+      { "x": -2, "y": 1, "parts": [ "hdframe_cross", "cargo_space", "roof", "solar_panel" ] },
+      { "x": -2, "y": 0, "parts": [ "hdframe_cross", "trunk_floor", "roof", "solar_panel" ] },
+      { "x": -2, "y": -1, "parts": [ "hdframe_cross", "cargo_space", "roof", "solar_panel" ] },
+      { "x": -2, "y": -2, "parts": [ "hdframe_vertical", "reinforced_windshield", "v_curtain", "door_motor", "plating_steel", "roof" ] },
+      { "x": -1, "y": 2, "parts": [ "hdframe_vertical", "hdstowboard_vertical", "plating_steel", "roof" ] },
+      { "x": -1, "y": 1, "parts": [ "hdframe_cross", "reclining_seat", "seatbelt_heavyduty", "roof" ] },
+      { "x": -1, "y": 0, "parts": [ "hdframe_cross", "reclining_seat", "seatbelt_heavyduty", "roof" ] },
+      { "x": -1, "y": -1, "parts": [ "hdframe_cross", "reclining_seat", "seatbelt_heavyduty", "roof" ] },
+      { "x": -1, "y": -2, "parts": [ "hdframe_vertical", "hdstowboard_vertical", "plating_steel", "roof" ] },
+      { "x": 0, "y": 2, "parts": [ "hdframe_vertical", "hddoor", "plating_steel", "roof", "v_curtain", "door_motor" ] },
+      { "x": 0, "y": 1, "parts": [ "hdframe_cross", "trunk_floor", "roof", "solar_panel" ] },
+      { "x": 0, "y": 0, "parts": [ "hdframe_cross", "reclining_seat", "seatbelt_heavyduty", "roof" ] },
+      { "x": 0, "y": -1, "parts": [ "hdframe_cross", "trunk_floor", "roof", "solar_panel" ] },
+      { "x": 0, "y": -2, "parts": [ "hdframe_vertical", "hddoor", "plating_steel", "roof", "v_curtain", "door_motor" ] },
+      { "x": 1, "y": 2, "parts": [ "hdframe_vertical", "hdboard_vertical", "plating_steel", "roof" ] },
+      { "x": 1, "y": 1, "parts": [ "hdframe_cross", "cargo_space", "roof", "solar_panel" ] },
+      { "x": 1, "y": 0, "parts": [ "hdframe_cross", "trunk_floor", "roof", "solar_panel", "aisle_lights" ] },
+      { "x": 1, "y": -1, "parts": [ "hdframe_cross", "cargo_space", "roof", "solar_panel" ] },
+      { "x": 1, "y": -2, "parts": [ "hdframe_vertical", "hdboard_vertical", "plating_steel", "roof" ] },
+      { "x": 2, "y": 2, "parts": [ "hdframe_vertical", "hdstowboard_vertical", "plating_steel", "roof" ] },
+      { "x": 2, "y": 1, "parts": [ "hdframe_cross", "welding_rig", "roof", "solar_panel" ] },
+      { "x": 2, "y": 0, "parts": [ "hdframe_cross", "trunk_floor", "roof", "solar_panel" ] },
+      { "x": 2, "y": -1, "parts": [ "hdframe_cross", "minifridge", "roof", "solar_panel", "water_faucet" ] },
+      { "x": 2, "y": -2, "parts": [ "hdframe_vertical", "hdstowboard_vertical", "plating_steel", "roof" ] },
+      { "x": 3, "y": 2, "parts": [ "hdframe_vertical", "hddoor", "plating_steel", "roof", "v_curtain", "door_motor" ] },
+      { "x": 3, "y": 1, "parts": [ "hdframe_cross", "seat", "seatbelt_heavyduty", "controls", "dashboard", "solar_panel" ] },
+      { "x": 3, "y": 0, "parts": [ "hdframe_cross", "box", "roof", "floodlight","stereo", "vehicle_clock", "horn_big" ] },
+      { "x": 3, "y": -1, "parts": [ "hdframe_cross", "seat", "seatbelt_heavyduty", "controls", "dashboard", "solar_panel" ] },
+      { "x": 3, "y": -2, "parts": [ "hdframe_vertical", "hddoor", "plating_steel", "roof", "v_curtain", "door_motor" ] },
+      { "x": 4, "y": 2, "parts": [ "hdframe_vertical", "reinforced_windshield", "plating_steel", "roof", "v_curtain", "door_motor" ] },
+      { "x": 4, "y": 1, "parts": [ "hdframe_cross", "reinforced_windshield", "roof", "v_curtain", "door_motor", "headlight_reinforced" ] },
+      { "x": 4, "y": 0, "parts": [ "hdframe_cross", "reinforced_windshield", "roof", "v_curtain", "door_motor" ] },
+      { "x": 4, "y": -1, "parts": [ "hdframe_cross", "reinforced_windshield", "roof", "v_curtain", "door_motor", "headlight_reinforced" ] },
+      { "x": 4, "y": -2, "parts": [ "hdframe_vertical", "reinforced_windshield", "plating_steel", "roof", "v_curtain", "door_motor" ] },
+      { "x": 5, "y": 2, "parts": [ "hdframe_ne", "hdhalfboard_ne", "plating_steel" ] },
+      { "x": 5, "y": 1, "parts": [ "hdframe_horizontal", "hdhalfboard_horizontal", "plating_steel" ] },
+      { "x": 5, "y": 0, "parts": [ "hdframe_horizontal", "hdhalfboard_horizontal", "plating_steel" ] },
+      { "x": 5, "y": -1, "parts": [ "hdframe_horizontal", "hdhalfboard_horizontal", "plating_steel" ] },
+      { "x": 5, "y": -2, "parts": [ "hdframe_nw", "hdhalfboard_nw", "plating_steel" ] },
+      { "x": 6, "y": 2, "parts": [ "ram_hardsteel" ] },
+      { "x": 6, "y": 1, "parts": [ "ram_hardsteel" ] },
+      { "x": 6, "y": 0, "parts": [ "ram_hardsteel" ] },
+      { "x": 6, "y": -1, "parts": [ "ram_hardsteel" ] },
+      { "x": 6, "y": -2, "parts": [ "ram_hardsteel" ] },
+      { "x": 0, "y": 0, "parts": [ "tank", "funnel", "water_purifier", "water_faucet" ] },
+      { "x": 3, "y": -2, "part": "controls_electronic" },
+      { "x": 0, "y": 0, "part": "inboard_mirror" },
+      { "x": 2, "y": 0, "part": "inboard_mirror" },
+      { "x": -2, "y": 0, "part": "inboard_mirror" },
+      { "x": 3, "y": 1, "part": "wheel_armor_steerable" },
+      { "x": 3, "y": -1, "part": "wheel_armor_steerable" },
+      { "x": 0, "y": 1, "part": "wheel_armor" },
+      { "x": 0, "y": -1, "part": "wheel_armor" },
+      { "x": -1, "y": 1, "part": "wheel_armor" },
+      { "x": -1, "y": -1, "part": "wheel_armor" },
+      { "x": -2, "y": 1, "part": "wheel_armor" },
+      { "x": -2, "y": -1, "part": "wheel_armor" },
+      { "x": -3, "y": -1, "part": "muffler" },
+      { "x": 3, "y": 1, "parts": [ "storage_battery_mount", "storage_battery_removable" ] },
+      { "x": 3, "y": -1, "parts": [ "storage_battery_mount", "storage_battery_removable" ] },
+      { "x": 4, "y": 0, "parts": [ "engine_electric_large", { "part": "tank", "fuel": "water_clean" } ] },
+      { "x": -1, "y": 0, "parts": [ "diesel_engine_i6", "alternator_truck", "alternator_car", "battery_car" ] },
+      { "x": 1, "y": -1, "part": "tank", "fuel": "diesel" },
+      { "x": -1, "y": -1, "part": "tank", "fuel": "diesel" }
+    ],
+    "items": [
+      { "x": 2, "y": 1, "chance": 100, "items": [ "toolbox", "jumper_cable", "char_smoker", "tailors_kit", "rope_30", "ax", "boltcutters", "e_tool", "hose", "pot", "small_repairkit", "battery", "battery", "duct_tape", "thread", "nail" ] },
+      { "x": 3, "y": 0, "chance": 100, "items": [ "1st_aid", "antibiotics", "vitamins", "calcium_tablet", "mre_beef_box", "mre_veggy_box", "mre_chicken_box", "mre_hotdog_box", "mre_ravioli_box", "lighter", "militarymap", "roadmap" ] },
+      { "x": 2, "y": 0, "chance": 100, "items": [ "dive_bag", "duffelbag" ] }
+    ]
+  },
+  {
+    "id": "survivor_weld_cart",
+    "type": "vehicle",
+    "name": "Survivor Welding Cart",
+    "parts": [
+      { "x": 0, "y": 0, "parts": [ "frame_cross", "welding_rig", "wheel_caster", "battery_car" ] },
+      { "x": 0, "y": 0, "parts": [ "controls", "controls_electronic", "solar_panel" ] },
+      { "x": 0, "y": 0, "parts": [ "engine_1cyl", "alternator_motorbike", "alternator_car", { "part": "tank_small", "fuel": "gasoline" } ] }
+    ],
+    "items": [
+      { "x": 0, "y": 0, "chance": 100, "items": [ "toolbox", "jumper_cable" ] }
+    ]
+  },
+  {
+    "id": "survivor_home_cart",
+    "type": "vehicle",
+    "name": "Survivor Home Cart",
+    "parts": [
+      { "x": 0, "y": 0, "parts": [ "frame_cross", "cargo_space", "wheel_caster" ] },
+      { "x": -1, "y": 0, "part": "crane_medium" }
+    ],
+    "items": [
+      { "x": 0, "y": 0, "chance": 100, "items": [ "cattlefodder", "cattlefodder", "hoe", "seed_blackberries", "seed_raspberries", "seed_strawberries", "seed_barley", "seed_sugar_beet", "seed_cabbage", "seed_tomato", "seed_broccoli", "seed_onion", "seed_garlic","seed_carrot", "seed_corn", "seed_potato_raw", "seed_buckwheat", "seed_oats", "seed_wheat" ] }
+    ]
+  },
+  {
+    "id": "survivor_loot_cart",
+    "type": "vehicle",
+    "name": "Survivor Loot Cart",
+    "parts": [
+      { "x": 0, "y": 0, "parts": [ "folding_frame", "basketlg_folding", "wheel_caster" ] }
+    ]
+  },
+  {
+    "id": "survivor_tractor",
+    "type": "vehicle",
+    "name": "Survivor Tractor",
+    "blueprint": [
+      [ " O O " ],
+      [ "&&#=&" ],
+      [ "&&#=&" ],
+      [ " O O " ]
+    ],
+    "parts": [
+      { "x": 0, "y": 0, "parts": [ "frame_vertical", "seat", "controls", "dashboard" ] },
+      { "x": 0, "y": 1, "parts": [ "frame_vertical", "seat" ] },
+      { "x": 1, "y": 0, "parts": [ "frame_vertical", "halfboard_vertical", "engine_electric_large" ] },
+      { "x": 1, "y": 1, "parts": [ "frame_vertical", "halfboard_vertical", "storage_battery_mount", "storage_battery_removable" ] },
+      { "x": 2, "y": 0, "part": "reaper" },
+      { "x": 2, "y": 1, "part": "reaper" },
+      { "x": -1, "y": 0, "parts": [ "frame_cross", "plow" ] },
+      { "x": -1, "y": 1, "parts": [ "frame_cross", "plow" ] },
+      { "x": -2, "y": 0, "part": "seed_drill" },
+      { "x": -2, "y": 1, "part": "seed_drill" },
+      { "x": -1, "y": 2, "parts": [ "frame_cross", "wheel_wide_steerable" ] },
+      { "x": -1, "y": -1, "parts": [ "frame_cross", "wheel_wide_steerable" ] },
+      { "x": 1, "y": 2, "parts": [ "frame_cross", "wheel_wide_steerable" ] },
+      { "x": 1, "y": -1, "parts": [ "frame_cross", "wheel_wide_steerable" ] }
+    ]
+  },
+  {
+    "id": "survivor_kitchen",
+    "type": "vehicle",
+    "name": "Survivor Kitchen",
+    "parts": [
+      { "x": 0, "y": 0, "parts": [ "frame_wood_cross", "seat", "aisle_lights" ] },
+      { "x": -1, "y": 0, "parts": [ "frame_wood_cross", "wooden_aisle_horizontal" ] },
+      { "x": -2, "y": 0, "parts": [ "frame_wood_cross", "door" ] },
+      { "x": -1, "y": 1, "parts": [ "frame_wood_cross", "craft_rig", "storage_battery_mount", "storage_battery_removable" ] },
+      { "x": -1, "y": -1, "parts": [ "frame_wood_cross", "veh_forge", "storage_battery_mount", "storage_battery_removable" ] },
+      { "x": -1, "y": 2, "parts": [ "frame_wood_cross", "chemlab", "storage_battery_mount", "storage_battery_removable" ] },
+      { "x": 0, "y": 2, "parts": [ "frame_wood_cross", "controls", "dashboard", "minifridge", "water_faucet", "stereo", "vehicle_clock" ] },
+      { "x": -3, "y": 0, "parts": [ "frame_wood_cross", "wooden_aisle_horizontal", "tank", "funnel", "water_purifier" ] },
+      { "x": -3, "y": 1, "parts": [ "frame_wood_cross", "wooden_aisle_horizontal", "solar_panel" ] },
+      { "x": -3, "y": -1, "parts": [ "frame_wood_cross", "wooden_aisle_horizontal", "solar_panel" ] },
+      { "x": -4, "y": 0, "parts": [ "frame_wood_cross", "wooden_aisle_horizontal", "solar_panel" ] },
+      { "x": -4, "y": 0, "parts": [ "engine_1cyl", "alternator_motorbike", "alternator_car", { "part": "tank_small", "fuel": "gasoline" } ] },
+      { "x": -4, "y": 1, "parts": [ "frame_wood_cross", "wooden_aisle_horizontal", "solar_panel" ] },
+      { "x": -4, "y": -1, "parts": [ "frame_wood_cross", "wooden_aisle_horizontal", "solar_panel" ] }
+    ],
+    "items": [
+      { "x": -1, "y": 2, "chance": 100, "items": [ "can_sealer", "pastaextruder", "pot", "waffleiron" ] },
+      { "x": -1, "y": -1, "chance": 100, "items": [ "anvil", "crucible", "hammer", "tongs", "chisel", "swage", "cordless_drill", "e_tool", "mold_plastic", "duct_tape", "nail", "nail" ] }
+    ]
+  }
+]
+
+
+
+
+
+

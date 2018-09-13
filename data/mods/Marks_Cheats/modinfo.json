@@ -1,0 +1,11 @@
+[
+  {
+    "type": "MOD_INFO",
+    "ident": "Mark's Cheats",
+    "name": "Mark's Cheats and Medieval Content",
+    "authors": [ "Mark Langsdorf, Chaosvolt" ],
+    "description": "Cheaty McCheater stuff and some medieval stuff too",
+    "category": "items",
+    "dependencies": [ "dda" ]
+  }
+]
