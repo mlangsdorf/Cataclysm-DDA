@@ -99,6 +99,10 @@ struct vpslot_engine {
     std::vector<std::string> exclusions;
 };
 
+struct vpslot_wheel {
+    float rolling_resistance = 1;
+};
+
 class vpart_info
 {
     private:
@@ -106,6 +110,7 @@ class vpart_info
         vpart_id id;
 
         cata::optional<vpslot_engine> engine_info;
+        cata::optional<vpslot_wheel> wheel_info;
 
     public:
         /** Translated name of a part */
@@ -246,6 +251,12 @@ class vpart_info
         int engine_muscle_power_factor() const;
         float engine_damaged_power_factor() const;
         int engine_noise_factor() const;
+        /**
+         * @name Wheel specific functions
+         *
+         */
+        float wheel_rolling_resistance() const;
+
     private:
         /** Name from vehicle part definition which if set overrides the base item name */
         mutable std::string name_;
@@ -272,6 +283,7 @@ class vpart_info
         void set_flag( const std::string &flag );
 
         static void load_engine( cata::optional<vpslot_engine> &eptr, JsonObject &jo );
+        static void load_wheel( cata::optional<vpslot_wheel> &whptr, JsonObject &jo );
         static void load( JsonObject &jo, const std::string &src );
         static void finalize();
         static void check();

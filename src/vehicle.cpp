@@ -31,6 +31,7 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
+#include <complex>
 #include <cmath>
 #include <cstdlib>
 #include <numeric>
@@ -47,6 +48,8 @@ static const itype_id fuel_type_battery( "battery" );
 static const itype_id fuel_type_muscle( "muscle" );
 static const itype_id fuel_type_plutonium_cell( "plut_cell" );
 static const std::string part_location_structure( "structure" );
+static const std::string part_location_center( "center" );
+static const std::string part_location_onroof( "on_roof" );
 
 static const fault_id fault_belt( "fault_engine_belt_drive" );
 static const fault_id fault_immobiliser( "fault_engine_immobiliser" );
@@ -1249,6 +1252,8 @@ int vehicle::install_part( const point dp, const vehicle_part &new_part )
     pt.mount = dp;
 
     refresh();
+    coeff_air_changed = true;
+    coeff_water_changed = true;
     return parts.size() - 1;
 }
 
@@ -1517,6 +1522,8 @@ bool vehicle::remove_part( int p )
     }
     g->m.dirty_vehicle_list.insert( this );
     refresh();
+    coeff_air_changed = true;
+    coeff_water_changed = true;
     return shift_if_needed();
 }
 
@@ -1547,6 +1554,10 @@ void vehicle::part_removal_cleanup()
     }
     shift_if_needed();
     refresh(); // Rebuild cached indices
+    coeff_air_dirty = coeff_air_changed;
+    coeff_water_dirty = coeff_water_changed;
+    coeff_air_changed = false;
+    coeff_water_changed = false;
 }
 
 void vehicle::remove_carried_flag()
@@ -2748,8 +2759,9 @@ int vehicle::total_power_w( bool const fueled, bool const safe ) const
     return pwr;
 }
 
-int vehicle::acceleration( bool const fueled ) const
+int vehicle::acceleration( bool const fueled, int at_vel_in_vmi ) const
 {
+#if 0
     if( ( engine_on && has_engine_type_not( fuel_type_muscle, true ) ) || skidding ) {
         return safe_velocity( fueled ) * k_mass() / ( 1 + strain() ) / 10;
 
@@ -2766,18 +2778,110 @@ int vehicle::acceleration( bool const fueled ) const
     } else {
         return 0;
     }
+#endif
+    if( !( engine_on || skidding ) ) {
+        return 0;
+    }
+    int target_vmiph = max_velocity( fueled ) / 4;
+    if( at_vel_in_vmi > target_vmiph ) {
+        target_vmiph = at_vel_in_vmi;
+    }
+    int cmps = vmiph_to_cmps( target_vmiph );
+    int engine_power_ratio = total_power_w( fueled ) / to_kilogram( total_mass() );
+    int accel_at_vel = 100 * 100 * engine_power_ratio / cmps;
+    add_msg( m_debug, "accel at %d vimph (%d cmps) is %d (%d cmps)", target_vmiph, cmps,
+             cmps_to_vmiph( accel_at_vel ), accel_at_vel );
+    return cmps_to_vmiph( accel_at_vel );
 }
 
-// used to be engine power in 1/2HP * 80 is vmiph, so vmiph = watts / 373 * 80 == watts * 0.214
-static const double watts_to_vmiph = 0.2144772118;
+// cubic equation solution
+// don't use complex numbers unless necessary and it's usually not
+// see https://math.vanderbilt.edu/schectex/courses/cubic/ for the gory details
+double simple_cubic_solution( double a, double b, double c, double d )
+{
+    double p = -b / ( 3 * a );
+    double q = p * p * p + ( b * c - 3 * a * d ) / ( 6 * a * a );
+    double r = c / ( 3 * a );
+    double t = r - p * p;
+    double tricky_bit = q * q + t * t * t;
+    add_msg( m_debug, "simple_cubic p %3.2f q %3.2f r %3.2f tricky %3.2f", p, q, r, tricky_bit );
+    if( tricky_bit < 0 ) {
+        double cr = 1.0 / 3.0; // approximate the cube root of a complex number
+        std::complex<double> q_complex( q );
+        std::complex<double> tricky_complex( std::sqrt( std::complex<double>( tricky_bit ) ) );
+        std::complex<double> term1( std::pow( q_complex + tricky_complex, cr ) );
+        std::complex<double> term2( std::pow( q_complex - tricky_complex, cr ) );
+        std::complex<double> term_sum( term1 + term2 );
+
+        if( imag( term_sum ) < 2 ) {
+            return p + real( term_sum ) ;
+        } else {
+            debugmsg( "cubic solution returned imaginary values" );
+            return 0;
+        }
+    } else {
+        double tricky_final = std::sqrt( tricky_bit );
+        double term1_part = q + tricky_final;
+        double term2_part = q - tricky_final;
+        double term1 = std::cbrt( term1_part );
+        double term2 = std::cbrt( term2_part );
+        add_msg( m_debug, "\tmore cubic final %3.2f t1p %3.2f t2p %3.2f t1 %3.2f, t2 %3.2f, final %3.2f",
+                 tricky_final, term1_part, term2_part, term1, term2, p + term1 + term2 );
+        return p + term1 + term2;
+    }
+}
+
+int vehicle::current_acceleration( bool const fueled ) const
+{
+    return acceleration( fueled, std::abs( velocity ) );
+}
+
+// Ugly physics below:
+// maximum speed occurs when all available thrust is used to overcome air/rolling resistance
+// sigma F = 0 as we were taught in Engineering Mechanics 301
+// engine power is torque * rotation rate (in rads for simplicity)
+// torque / wheel radius = drive force at where the wheel meets the road
+// velocity is wheel radius * rotation rate (in rads for simplicity)
+// air resistance is -1/2 * air density * drag coeff * cross area * v^2
+//        and c_air_drag is -1/2 * air density * drag coeff * cross area
+// rolling resistance is mass * accel_g * rolling coeff * 0.000225 * ( 33.3 + v )
+//        and c_rolling_drag is mass * accel_g * rolling coeff * 0.000225
+//        and rolling_constant_to_variable is 33.3
+// or by formula:
+// max velocity occurs when F_drag = F_wheel
+// F_wheel = engine_power / rotation_rate / wheel_radius
+// velocity = rotation_rate * wheel_radius
+// F_wheel * velocity = engine_power * rotation_rate * wheel_radius / rotation_rate / wheel_radius
+// F_wheel * velocity = engine_power
+// F_wheel = engine_power / velocity
+// F_drag = F_air_drag + F_rolling_drag
+// F_air_drag = c_air_drag * velocity^2
+// F_rolling_drag = c_rolling_drag * velocity + rolling_constant_to_variable * c_rolling_drag
+// engine_power / v = c_air_drag * v^2 + c_rolling_drag * v + 33 * c_rolling_drag
+// c_air_drag * v^3 + c_rolling_drag * v^2 + c_rolling_drag * 33.3 * v - engine power = 0
+// solve for v with the simplified cubic equation solver
+// got it? quiz on Wednesday.
 int vehicle::max_velocity( bool const fueled ) const
 {
-    return total_power_w( fueled ) * watts_to_vmiph;
+    int total_engine_w = total_power_w( fueled );
+    double c_rolling_drag = coeff_rolling_drag();
+    double max_in_mps = simple_cubic_solution( coeff_air_drag(), c_rolling_drag,
+                        c_rolling_drag * vehicles::rolling_constant_to_variable,
+                        -total_engine_w );
+    add_msg( m_debug, "power %d, c_air %3.2f, c_rolling %3.2f, max_in_mps %3.2f", total_engine_w,
+             coeff_air_drag(), c_rolling_drag, max_in_mps );
+    return mps_to_vmiph( max_in_mps );
 }
 
+// the same physics as max_velocity, but with a smaller engine power
 int vehicle::safe_velocity( bool const fueled ) const
 {
-    return total_power_w( fueled, true ) * k_dynamics() * k_mass() * watts_to_vmiph;
+    int effective_engine_w = total_power_w( fueled, true );
+    double c_rolling_drag = coeff_rolling_drag();
+    double safe_in_mps = simple_cubic_solution( coeff_air_drag(), c_rolling_drag,
+                         c_rolling_drag * vehicles::rolling_constant_to_variable,
+                         -effective_engine_w );
+    return mps_to_vmiph( safe_in_mps );
 }
 
 bool vehicle::do_environmental_effects()
@@ -2965,6 +3069,205 @@ float vehicle::k_mass() const
     return km;
 }
 
+static double tile_to_width( int tiles )
+{
+    if( tiles < 1 ) {
+        return 0.1;
+    } else if( tiles < 6 ) {
+        return 0.5 + 0.4 * tiles;
+    } else {
+        return 2.5 + 0.15 * ( tiles - 5 );
+    }
+}
+
+static constexpr int minrow = -122;
+static constexpr int maxrow = 122;
+struct drag_column {
+    int pro = minrow;
+    int hboard = minrow;
+    int fboard = minrow;
+    int aisle = minrow;
+    int seat = minrow;
+    int exposed = minrow;
+    int roof = minrow;
+    int shield = minrow;
+    int turret = minrow;
+    int panel = minrow;
+    int last = maxrow;
+};
+
+double vehicle::coeff_air_drag() const
+{
+    if( !coeff_air_dirty ) {
+        return coefficient_air_resistance;
+    }
+    constexpr double c_air_base = 0.25;
+    constexpr double c_air_mod = 0.1;
+    constexpr double base_height = 1.4;
+    constexpr double aisle_height = 0.6;
+    constexpr double fullboard_height = 0.5;
+    constexpr double roof_height = 0.1;
+
+    std::vector<int> structure_indices = all_parts_at_location( part_location_structure );
+    int min_x = 0;
+    int max_x = 0;
+    int min_y = 0;
+    int max_y = 0;
+    // find how many rows and columns the vehicle has
+    for( int p : structure_indices ) {
+        min_x = std::min( min_x, parts[p].mount.x );
+        max_x = std::max( max_x, parts[p].mount.x );
+        min_y = std::min( min_y, parts[p].mount.y );
+        max_y = std::max( max_y, parts[p].mount.y );
+    }
+    int width = max_y - min_y + 1;
+
+    // a mess of lambdas to make the next bit slightly easier to read
+    const auto d_exposed = [&]( const vehicle_part & p ) {
+        // if it's not inside, it's a center location, and it doesn't need a roof, it's exposed
+        if( p.info().location != part_location_center ) {
+            return false;
+        }
+        return !( p.inside || p.info().has_flag( "NO_ROOF_NEEDED" ) || p.info().has_flag( "WINDSHIELD" ) ||
+                  p.info().has_flag( "OPENABLE" ) );
+    };
+
+    const auto d_protrusion = [&]( std::vector<int> parts_at ) {
+        if( parts_at.size() > 1 ) {
+            return false;
+        } else {
+            return parts[ parts_at.front() ].info().has_flag( "PROTRUSION" );
+        }
+    };
+    const auto d_check_min = [&]( int &value, const vehicle_part & p, bool test ) {
+        value = std::min( value, test ? p.mount.x - min_x : maxrow );
+    };
+    const auto d_check_max = [&]( int &value, const vehicle_part & p, bool test ) {
+        value = std::max( value, test ? p.mount.x - min_x : minrow );
+    };
+
+    // raycast down each column. the least drag vehicle has halfboard, windshield, seat with roof, windshield, halfboard and is twice as long as it is wide. find the first instance of each item.
+    std::vector<drag_column> drag( width );
+    for( int p : structure_indices ) {
+        if( parts[ p ].removed ) {
+            continue;
+        }
+        int col = parts[ p ].mount.y - min_y;
+        std::vector<int> parts_at = parts_at_relative( parts[ p ].mount, true );
+        d_check_min( drag[ col ].pro, parts[ p ], d_protrusion( parts_at ) );
+        for( int pa_index : parts_at ) {
+            const vehicle_part &pa = parts[ pa_index ];
+            d_check_max( drag[ col ].hboard, pa, pa.info().has_flag( "HALF_BOARD" ) );
+            d_check_max( drag[ col ].fboard, pa, pa.info().has_flag( "FULL_BOARD" ) );
+            d_check_max( drag[ col ].aisle, pa, pa.info().has_flag( "AISLE" ) );
+            d_check_max( drag[ col ].shield, pa, pa.info().has_flag( "WINDSHIELD" ) && pa.is_available() );
+            d_check_max( drag[ col ].seat, pa, pa.info().has_flag( "SEAT" ) || pa.info().has_flag( "BED" ) );
+            d_check_max( drag[ col ].turret, pa, pa.info().location == part_location_onroof &&
+                         !pa.info().has_flag( "SOLAR_PANEL" ) );
+            d_check_max( drag[ col ].roof, pa, pa.info().has_flag( "ROOF" ) );
+            d_check_max( drag[ col ].panel, pa, pa.info().has_flag( "SOLAR_PANEL" ) );
+            d_check_max( drag[ col ].exposed, pa, d_exposed( pa ) );
+            d_check_min( drag[ col ].last, pa, pa.info().has_flag( "LOW_FINAL_AIR_DRAG" ) ||
+                         pa.info().has_flag( "HALF_BOARD" ) );
+        }
+    }
+    double height = 1;
+    double c_air_drag = c_air_base;
+    // tally the results of each row, and take the worst height and worst c_air_drag
+    for( drag_column &dc : drag ) {
+        //add_msg( m_debug, "veh %: pro %d, hboard %d, fboard %d, shield %d, seat %d, roof %d, aisle %d, turret %d, panel %d, exposed %d, last %d\n", name.c_str(), dc.pro, dc.hboard, dc.fboard, dc.shield, dc.seat, dc.roof, dc.aisle, dc.turret, dc.panel, dc.exposed, dc.last );
+
+        double c_air_drag_c = c_air_base;
+        // rams in front of the vehicle mildly worsens air drag
+        c_air_drag_c += ( dc.pro > dc.hboard ) ? c_air_mod : 0;
+        // not having halfboards in front of any windshields or fullboards moderately worsens air drag
+        c_air_drag_c += ( std::max( std::max( dc.hboard, dc.fboard ),
+                                    dc.shield ) != dc.hboard ) ? 2 * c_air_mod : 0;
+        // not having windshields in front of seats severely worsens air drag
+        c_air_drag_c += ( dc.shield < dc.seat ) ? 3 * c_air_mod : 0;
+        // missing roofs and open doors severely worsen air drag
+        c_air_drag_c += ( dc.exposed > minrow ) ? 3 * c_air_mod : 0;
+        // being twice as long as wide mildly reduces air drag
+        c_air_drag_c -= ( 2 * ( max_x - min_x ) > width ) ? c_air_mod : 0;
+        // trunk doors and halfboards at the tail mildly reduce air drag
+        c_air_drag_c -= ( dc.last == min_x ) ? c_air_mod : 0;
+        // turrets severely worse air drag
+        c_air_drag_c += ( dc.turret > minrow ) ? 3 * c_air_mod : 0;
+        c_air_drag = std::max( c_air_drag, c_air_drag_c );
+        // vehicles are 1.4m tall
+        double c_height = base_height;
+        // plus a bit for a roof
+        c_height += ( dc.roof > minrow ) ? roof_height : 0;
+        // plus a lot for an aisle
+        c_height += ( dc.aisle > minrow ) ?  aisle_height : 0;
+        // or fullboards
+        c_height += ( dc.fboard > minrow ) ? fullboard_height : 0;
+        // and a little for anything on the roof
+        c_height += ( dc.turret > minrow ) ? 2 * roof_height : 0;
+        // solar panels are better than turrets or floodlights, though
+        c_height += ( dc.panel > minrow ) ? roof_height : 0;
+        height = std::max( height, c_height );
+    }
+    constexpr double air_density = 1.29; // kg/m^3
+    double area = height * tile_to_width( width );
+    add_msg( m_debug, "%s: height %3.2fm, width %3.2fm (%d tiles), c_air %3.2f\n", name.c_str(), height,
+             tile_to_width( width ), width, c_air_drag );
+    // F_air_drag = c_air_drag * cross_area * 1/2 * air_density * v^2
+    // coeff_air_resistance = c_air_drag * cross_area * 1/2 * air_density
+    coefficient_air_resistance = std::max( 0.1, c_air_drag * area * 0.5 * air_density );
+    coeff_air_dirty = false;
+    return coefficient_air_resistance;
+}
+
+double vehicle::coeff_rolling_drag() const
+{
+    if( !coeff_rolling_dirty ) {
+        return coefficient_rolling_resistance;
+    }
+    constexpr double wheel_ratio = 1.25;
+    constexpr double base_wheels = 4.0;
+    // SAE J2452 measurements are in F_rr = N * C_rr * 0.000225 * ( v + 33.33 )
+    // Don't ask me why, but it's the numbers we have. We want N * C_rr * 0.000225 here,
+    // and N is mass * accel from gravity (aka weight)
+    constexpr double sae_ratio = 0.000225;
+    constexpr double newton_ratio = accel_g * sae_ratio;
+    double wheel_factor = 0;
+    // should really sum the each wheel's c_rolling_resistance * it's share of vehicle mass
+    for( auto wheel : wheelcache ) {
+        wheel_factor += parts[ wheel ].info().wheel_rolling_resistance();
+    }
+    // mildly increasing rolling resistance for vehicles with more than 4 wheels and mildly
+    // decrease it for vehicles with less
+    wheel_factor *=  wheel_ratio / ( base_wheels * wheel_ratio - base_wheels + wheelcache.size() );
+    coefficient_rolling_resistance = newton_ratio * wheel_factor * to_kilogram( total_mass() );
+    coeff_rolling_dirty = false;
+    return coefficient_rolling_resistance;
+}
+
+double vehicle::coeff_water_drag() const
+{
+    if( !coeff_water_dirty ) {
+        return coefficient_water_resistance;
+    }
+    std::vector<int> structure_indices = all_parts_at_location( part_location_structure );
+    int min_y = 0;
+    int max_y = 0;
+    for( int p : structure_indices ) {
+        min_y = std::min( min_y, parts[p].mount.y );
+        max_y = std::max( max_y, parts[p].mount.y );
+    }
+    int width = max_y - min_y;
+    // todo: calculate actual coefficent of water drag
+    // todo: calculate actual draft
+    double draft = 1;
+    constexpr double water_density = 1000; // kg/m^3
+    double c_water_drag = 0.45;
+    // F_water_drag = c_water_drag * cross_area * 1/2 * water_density * v^2
+    // coeff_water_resistance = c_water_drag * cross_area * 1/2 * water_density
+    coefficient_water_resistance = c_water_drag * tile_to_width( width ) * draft * 0.5 * water_density;
+    coeff_water_dirty = false;
+    return coefficient_water_resistance;
+}
 float vehicle::k_traction( float wheel_traction_area ) const
 {
     if( wheel_traction_area <= 0.01f ) {
@@ -3122,40 +3425,38 @@ std::map<itype_id, int> vehicle::fuel_usage() const
     return ret;
 }
 
-float vehicle::drain_energy( const itype_id &ftype, float energy )
+double vehicle::drain_energy( const itype_id &ftype, double energy_j )
 {
-    float drained = 0.0f;
+    double drained = 0.0f;
     for( auto &p : parts ) {
-        if( energy <= 0.0f ) {
+        if( energy_j <= 0.0f ) {
             break;
         }
 
-        float consumed = p.consume_energy( ftype, energy );
+        double consumed = p.consume_energy( ftype, energy_j );
         drained += consumed;
-        energy -= consumed;
+        energy_j -= consumed;
     }
 
     invalidate_mass();
     return drained;
 }
 
-void vehicle::consume_fuel( double load = 1.0 )
+void vehicle::consume_fuel( double load = 1.0, time_duration t = 1_turns )
 {
-    float st = strain();
+    double st = strain();
     for( auto &fuel_pr : fuel_usage() ) {
         auto &ft = fuel_pr.first;
-        int amnt_fuel_use = fuel_pr.second;
 
-        // In kilojoules
-        double amnt_precise = double( amnt_fuel_use ) / 1000;
-        amnt_precise *= load * ( 1.0 + st * st * 100.0 );
+        double amnt_precise_j = static_cast<double>( fuel_pr.second ) * to_minutes<double>( t ) * 60;
+        amnt_precise_j *= load * ( 1.0 + st * st * 100.0 );
         double remainder = fuel_remainder[ ft ];
-        amnt_precise -= remainder;
+        amnt_precise_j -= remainder;
 
-        if( amnt_precise > 0.0f ) {
-            fuel_remainder[ ft ] = drain_energy( ft, amnt_precise ) - amnt_precise;
+        if( amnt_precise_j > 0.0f ) {
+            fuel_remainder[ ft ] = drain_energy( ft, amnt_precise_j ) - amnt_precise_j;
         } else {
-            fuel_remainder[ ft ] = -amnt_precise;
+            fuel_remainder[ ft ] = -amnt_precise_j;
         }
     }
     //do this with chance proportional to current load
@@ -3482,7 +3783,7 @@ void vehicle::idle( bool on_map )
         if( idle_rate < 0.01 ) {
             idle_rate = 0.01;    // minimum idle is 1% of full throttle
         }
-        consume_fuel( idle_rate );
+        consume_fuel( idle_rate, 1_turns );
 
         if( on_map ) {
             noise_and_smoke( idle_rate, 6.0 );
@@ -4443,6 +4744,8 @@ int vehicle::damage_direct( int p, int dmg, damage_type type )
         parts[p].items.clear();
 
         invalidate_mass();
+        coeff_air_changed = true;
+        coeff_water_changed = true;
     }
 
     if( parts[p].is_fuel_store() ) {
@@ -4691,6 +4994,7 @@ void vehicle::invalidate_mass()
     mass_center_no_precalc_dirty = true;
     // Anything that affects mass will also affect the pivot
     pivot_dirty = true;
+    coeff_rolling_dirty = true;
 }
 
 void vehicle::refresh_mass() const

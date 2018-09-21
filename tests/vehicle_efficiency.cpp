@@ -373,20 +373,20 @@ TEST_CASE( "vehicle_make_efficiency_case", "[.]" )
 // Fix test for electric vehicles
 TEST_CASE( "vehicle_efficiency", "[vehicle] [engine]" )
 {
-    test_vehicle( "beetle", 230100, 185500, 12790, 10650 );
-    test_vehicle( "car", 225700, 130800, 12860, 7469 );
-    test_vehicle( "car_sports", 259200, 148800, 13350, 7557 );
-    test_vehicle( "electric_car", 69590, 45180, 3620, 2300 );
-    test_vehicle( "suv", 474900, 233000, 26800, 13310 );
-    test_vehicle( "motorcycle", 65910, 36970, 3108, 1756 );
-    test_vehicle( "quad_bike", 42710, 28810, 2675, 1756 );
-    test_vehicle( "scooter", 58320, 56490, 2966, 2966 );
-    test_vehicle( "superbike", 75480, 8131, 3204, 1190 );
-    test_vehicle( "ambulance", 303500, 230100, 19050, 14950 );
-    test_vehicle( "fire_engine", 363100, 304800, 21880, 18520 );
-    test_vehicle( "fire_truck", 249700, 55040, 16550, 3450 );
-    test_vehicle( "truck_swat", 272100, 60190, 19810, 4421 );
-    test_vehicle( "tractor_plow", 226900, 226900, 13300, 13300 );
-    test_vehicle( "apc", 867300, 770300, 62170, 57230 );
-    test_vehicle( "humvee", 353100, 169400, 22400, 10360 );
+    test_vehicle( "beetle", 657100, 657100, 4790, 4060 );
+    test_vehicle( "car", 729500, 729500, 3760, 2540 );
+    test_vehicle( "car_sports", 266300, 266300, 1790, 1200 );
+    test_vehicle( "electric_car", 92360, 92360, 400, 290 );
+    test_vehicle( "suv", 1073000, 1073000, 5390, 3234 );
+    test_vehicle( "motorcycle", 261800, 261800, 4690, 1380 );
+    test_vehicle( "quad_bike", 209800, 209800, 3690, 1320 );
+    test_vehicle( "scooter", 348000, 348000, 25210, 24000 );
+    test_vehicle( "superbike", 143200, 143200, 2400, 500 );
+    test_vehicle( "ambulance", 661200, 661200, 5957, 4350 );
+    test_vehicle( "fire_engine", 695800, 695800, 4350, 3910 );
+    test_vehicle( "fire_truck", 641400, 641400, 2430, 630 );
+    test_vehicle( "truck_swat", 680100, 680100, 1863, 526 );
+    test_vehicle( "tractor_plow", 432500, 432500, 4980, 4980 );
+    test_vehicle( "apc", 2016000, 2016000, 7404, 6816 );
+    test_vehicle( "humvee", 768900, 768900, 2640, 1240 );
 }

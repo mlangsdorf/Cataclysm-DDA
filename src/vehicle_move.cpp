@@ -33,203 +33,61 @@ const skill_id skill_driving( "driving" );
 
 // tile height in meters
 static const float tile_height = 4;
+// miles per hour to vehicle 100ths of miles per hour
+static const int mi_to_vmi = 100;
+// meters per second to miles per hour
+static const float mps_to_miph = 2.23694f;
+
+// convert m/s to vehicle 100ths of a mile per hour
+int mps_to_vmiph( double mps )
+{
+    return mps * mps_to_miph * mi_to_vmi;
+}
+
+// convert vehicle 100ths of a mile per hour to m/s
+double vmiph_to_mps( int vmiph )
+{
+    return vmiph / mps_to_miph / mi_to_vmi;
+}
+
+int cmps_to_vmiph( int cmps )
+{
+    return cmps * mps_to_miph;
+}
+
+int vmiph_to_cmps( int vmiph )
+{
+    return vmiph / mps_to_miph;
+}
+
 int vehicle::slowdown() const
 {
-    const double relative_sin = sin( DEGREES( face.dir() - move.dir() ) );
-    // Mph lost per tile when coasting, by an ideal vehicle
-    const int base_slowdown = falling ? 1 : 5 + std::floor( 45 * std::abs( relative_sin ) );
+    double mps = vmiph_to_mps( velocity );
 
-    // "Anti-ideal" vehicle slows down up to 10 times faster than ideal one
-    const float k_slowdown = 20.0f / ( 2.0f + 9 * ( k_dynamics() * k_mass() ) );
-    // drag is in units of 1/2 HP here, so plows make good emergency brakes.
-    const int slowdown = drag() + static_cast<int>( std::ceil( k_slowdown * base_slowdown ) );
-    add_msg( m_debug, "%s vel: %d, slowdown: %d", name, velocity, slowdown );
+    // slowdown due to air resistance is proportional to square of speed
+    double f_total_drag = coeff_air_drag() * mps * mps;
+    bool is_floating = !floating.empty();
+    if( is_floating ) {
+        // same with water resistance
+        f_total_drag += coeff_water_drag() * mps * mps;
+    } else if( !falling ) {
+        // slowdown due to rolling resistance is proportional to speed
+        double f_rolling_drag = coeff_rolling_drag() * ( vehicles::rolling_constant_to_variable + mps );
+        // increase rolling resistance by up to 10x if the vehicle is skidding at right angle to facing
+        const double skid_factor = 1 + 9 * std::abs( sin( DEGREES( face.dir() - move.dir() ) ) );
+        f_total_drag += f_rolling_drag * skid_factor;
+    }
+    double accel_slowdown = f_total_drag / to_kilogram( total_mass() );
+    // converting m/s^2 to vmiph/s
+    int slowdown = mps_to_vmiph( accel_slowdown );
+    add_msg( "at %d vimph, f_drag %3.2f, drag accel %d vmiph (%3.2f m/s) - extra drag %d", velocity,
+             f_total_drag, slowdown, accel_slowdown, drag() );
+    // plows slow rolling vehicles, but not falling or floating vehicles
+    if( !( falling or is_floating ) ) {
+        slowdown += drag();
+    }
 
     return slowdown;
-}
-
-void vehicle::thrust( int thd )
-{
-    //if vehicle is stopped, set target direction to forward.
-    //ensure it is not skidding. Set turns used to 0.
-    if( velocity == 0 ) {
-        turn_dir = face.dir();
-        move = face;
-        of_turn_carry = 0;
-        last_turn = 0;
-        skidding = false;
-    }
-
-    if( has_part( "STEREO", true ) ) {
-        play_music();
-    }
-
-    if( has_part( "CHIMES", true ) ) {
-        play_chimes();
-    }
-
-    // No need to change velocity
-    if( !thd ) {
-        return;
-    }
-
-    bool pl_ctrl = player_in_control( g->u );
-
-    // No need to change velocity if there are no wheels
-    if( !valid_wheel_config( !floating.empty() ) && velocity == 0 ) {
-        if( pl_ctrl ) {
-            if( floating.empty() ) {
-                add_msg( _( "The %s doesn't have enough wheels to move!" ), name );
-            } else {
-                add_msg( _( "The %s is too leaky!" ), name );
-            }
-        }
-        return;
-    }
-
-    // Accelerate (true) or brake (false)
-    bool thrusting = true;
-    if( velocity ) {
-        int sgn = ( velocity < 0 ) ? -1 : 1;
-        thrusting = ( sgn == thd );
-    }
-
-    // @todo: Pass this as an argument to avoid recalculating
-    float traction = k_traction( g->m.vehicle_wheel_traction( *this ) );
-    int accel = acceleration() * traction;
-    if( thrusting && accel == 0 ) {
-        if( pl_ctrl ) {
-            add_msg( _( "The %s is too heavy for its engine(s)!" ), name );
-        }
-
-        return;
-    }
-
-    int max_vel = max_velocity() * traction;
-    // Get braking power
-    int brake = 30 * k_mass();
-    int brk = abs( velocity ) * brake / 100;
-    if( brk < accel ) {
-        brk = accel;
-    }
-    if( brk < 10 * 100 ) {
-        brk = 10 * 100;
-    }
-    //pos or neg if accelerator or brake
-    int vel_inc = ( ( thrusting ) ? accel : brk ) * thd;
-    if( thd == -1 && thrusting ) {
-        //accelerate 60% if going backward
-        vel_inc = .6 * vel_inc;
-    }
-
-    // Keep exact cruise control speed
-    if( cruise_on ) {
-        if( thd > 0 ) {
-            vel_inc = std::min( vel_inc, cruise_velocity - velocity );
-        } else {
-            vel_inc = std::max( vel_inc, cruise_velocity - velocity );
-        }
-    }
-
-    //find power ratio used of engines max
-    double load;
-    if( cruise_on ) {
-        load = static_cast<float>( abs( vel_inc ) ) / std::max( ( thrusting ? accel : brk ), 1 );
-    } else {
-        load = ( thrusting ? 1.0 : 0.0 );
-    }
-
-    // only consume resources if engine accelerating
-    if( load >= 0.01 && thrusting ) {
-        //abort if engines not operational
-        if( total_power_w() <= 0 || !engine_on || accel == 0 ) {
-            if( pl_ctrl ) {
-                if( total_power_w( false ) <= 0 ) {
-                    add_msg( m_info, _( "The %s doesn't have an engine!" ), name );
-                } else if( has_engine_type( fuel_type_muscle, true ) ) {
-                    add_msg( m_info, _( "The %s's mechanism is out of reach!" ), name );
-                } else if( !engine_on ) {
-                    add_msg( _( "The %s's engine isn't on!" ), name );
-                } else if( traction < 0.01f ) {
-                    add_msg( _( "The %s is stuck." ), name );
-                } else {
-                    add_msg( _( "The %s's engine emits a sneezing sound." ), name );
-                }
-            }
-            cruise_velocity = 0;
-            return;
-        }
-
-        //make noise and consume fuel
-        noise_and_smoke( load );
-        consume_fuel( load );
-
-        //break the engines a bit, if going too fast.
-        int strn = static_cast<int>( ( strain() * strain() * 100 ) );
-        for( size_t e = 0; e < engines.size(); e++ ) {
-            do_engine_damage( e, strn );
-        }
-    }
-
-    //wheels aren't facing the right way to change velocity properly
-    //lower down, since engines should be getting damaged anyway
-    if( skidding ) {
-        return;
-    }
-
-    //change vehicles velocity
-    if( ( velocity > 0 && velocity + vel_inc < 0 ) || ( velocity < 0 && velocity + vel_inc > 0 ) ) {
-        //velocity within braking distance of 0
-        stop();
-    } else {
-        // Increase velocity up to max_vel or min_vel, but not above.
-        const int min_vel = -max_vel / 4;
-        if( vel_inc > 0 ) {
-            // Don't allow braking by accelerating (could happen with damaged engines)
-            velocity = std::max( velocity, std::min( velocity + vel_inc, max_vel ) );
-        } else {
-            velocity = std::min( velocity, std::max( velocity + vel_inc, min_vel ) );
-        }
-    }
-}
-
-void vehicle::cruise_thrust( int amount )
-{
-    if( amount == 0 ) {
-        return;
-    }
-    int safe_vel = safe_velocity();
-    int max_vel = max_velocity();
-    int max_rev_vel = -max_vel / 4;
-
-    //if the safe velocity is between the cruise velocity and its next value, set to safe velocity
-    if( ( cruise_velocity < safe_vel && safe_vel < ( cruise_velocity + amount ) ) ||
-        ( cruise_velocity > safe_vel && safe_vel > ( cruise_velocity + amount ) ) ) {
-        cruise_velocity = safe_vel;
-    } else {
-        if( amount < 0 && ( cruise_velocity == safe_vel || cruise_velocity == max_vel ) ) {
-            // If coming down from safe_velocity or max_velocity decrease by one so
-            // the rounding below will drop velocity to a multiple of amount.
-            cruise_velocity += -1;
-        } else if( amount > 0 && cruise_velocity == max_rev_vel ) {
-            // If increasing from max_rev_vel, do the opposite.
-            cruise_velocity += 1;
-        } else {
-            // Otherwise just add the amount.
-            cruise_velocity += amount;
-        }
-        // Integer round to lowest multiple of amount.
-        // The result is always equal to the original or closer to zero,
-        // even if negative
-        cruise_velocity = ( cruise_velocity / abs( amount ) ) * abs( amount );
-    }
-    // Can't have a cruise speed faster than max speed
-    // or reverse speed faster than max reverse speed.
-    if( cruise_velocity > max_vel ) {
-        cruise_velocity = max_vel;
-    } else if( cruise_velocity < max_rev_vel ) {
-        cruise_velocity = max_rev_vel;
-    }
 }
 
 void vehicle::turn( int deg )
@@ -804,11 +662,208 @@ void vehicle::handle_trap( const tripoint &p, int part )
     }
 }
 
+void vehicle::thrust( int thd )
+{
+    //if vehicle is stopped, set target direction to forward.
+    //ensure it is not skidding. Set turns used to 0.
+    if( velocity == 0 ) {
+        turn_dir = face.dir();
+        move = face;
+        of_turn_carry = 0;
+        last_turn = 0;
+        skidding = false;
+    }
+
+    if( has_part( "STEREO", true ) ) {
+        play_music();
+    }
+
+    if( has_part( "CHIMES", true ) ) {
+        play_chimes();
+    }
+
+    // No need to change velocity
+    if( !thd ) {
+        return;
+    }
+
+    bool pl_ctrl = player_in_control( g->u );
+
+    // No need to change velocity if there are no wheels
+    if( !valid_wheel_config( !floating.empty() ) && velocity == 0 ) {
+        if( pl_ctrl ) {
+            if( floating.empty() ) {
+                add_msg( _( "The %s doesn't have enough wheels to move!" ), name );
+            } else {
+                add_msg( _( "The %s is too leaky!" ), name );
+            }
+        }
+        return;
+    }
+
+    // Accelerate (true) or brake (false)
+    bool thrusting = true;
+    if( velocity ) {
+        int sgn = ( velocity < 0 ) ? -1 : 1;
+        thrusting = ( sgn == thd );
+    }
+
+    const int decel_in_vmiph = slowdown();
+    //add_msg( m_debug, "%s vel: %d, slowdown: %d", name, velocity, slowdown );
+    if( decel_in_vmiph > abs( velocity ) ) {
+        stop();
+    } else if( velocity < 0 ) {
+        velocity += decel_in_vmiph;
+    } else {
+        velocity -= decel_in_vmiph;
+    }
+
+    // @todo: Pass this as an argument to avoid recalculating
+    float traction = k_traction( g->m.vehicle_wheel_traction( *this ) );
+    int accel = current_acceleration() * traction;
+    add_msg( "final accel is %d, net traction is %3.2f", accel, traction );
+    if( thrusting && accel == 0 ) {
+        if( pl_ctrl ) {
+            add_msg( _( "The %s is too heavy for its engine(s)!" ), name );
+        }
+
+        return;
+    }
+
+    int max_vel = max_velocity() * traction;
+    // Get braking power
+    int brake = 30 * k_mass();
+    int brk = abs( velocity ) * brake / 100;
+    if( brk < accel ) {
+        brk = accel;
+    }
+    if( brk < 10 * 100 ) {
+        brk = 10 * 100;
+    }
+    //pos or neg if accelerator or brake
+    int vel_inc = ( ( thrusting ) ? accel : brk ) * thd;
+    if( thd == -1 && thrusting ) {
+        //accelerate 60% if going backward
+        vel_inc = .6 * vel_inc;
+    }
+
+    // Keep exact cruise control speed
+    if( cruise_on ) {
+        if( thd > 0 ) {
+            vel_inc = std::min( vel_inc, cruise_velocity - velocity );
+        } else {
+            vel_inc = std::max( vel_inc, cruise_velocity - velocity );
+        }
+    }
+
+    //find power ratio used of engines max
+    double load;
+    if( cruise_on ) {
+        load = ( ( float )abs( vel_inc ) ) / std::max( ( thrusting ? accel : brk ), 1 );
+    } else {
+        load = ( thrusting ? 1.0 : 0.0 );
+    }
+
+    // only consume resources if engine accelerating
+    if( load >= 0.01 && thrusting ) {
+        //abort if engines not operational
+        if( total_power_w() <= 0 || !engine_on || accel == 0 ) {
+            if( pl_ctrl ) {
+                if( total_power_w( false ) <= 0 ) {
+                    add_msg( m_info, _( "The %s doesn't have an engine!" ), name );
+                } else if( has_engine_type( fuel_type_muscle, true ) ) {
+                    add_msg( m_info, _( "The %s's mechanism is out of reach!" ), name );
+                } else if( !engine_on ) {
+                    add_msg( _( "The %s's engine isn't on!" ), name );
+                } else if( traction < 0.01f ) {
+                    add_msg( _( "The %s is stuck." ), name );
+                } else {
+                    add_msg( _( "The %s's engine emits a sneezing sound." ), name );
+                }
+            }
+            cruise_velocity = 0;
+            return;
+        }
+
+        //make noise and consume fuel
+        noise_and_smoke( load );
+        consume_fuel( load, 1_turns );
+
+        //break the engines a bit, if going too fast.
+        int strn = static_cast<int>( ( strain() * strain() * 100 ) );
+        for( size_t e = 0; e < engines.size(); e++ ) {
+            do_engine_damage( e, strn );
+        }
+    }
+
+    //wheels aren't facing the right way to change velocity properly
+    //lower down, since engines should be getting damaged anyway
+    if( skidding ) {
+        return;
+    }
+
+    //change vehicles velocity
+    if( ( velocity > 0 && velocity + vel_inc < 0 ) ||
+        ( velocity < 0 && velocity + vel_inc > 0 ) ) {
+        //velocity within braking distance of 0
+        stop();
+    } else {
+        // Increase velocity up to max_vel or min_vel, but not above.
+        const int min_vel = -max_vel / 4;
+        if( vel_inc > 0 ) {
+            // Don't allow braking by accelerating (could happen with damaged engines)
+            velocity = std::max( velocity, std::min( velocity + vel_inc, max_vel ) );
+        } else {
+            velocity = std::min( velocity, std::max( velocity + vel_inc, min_vel ) );
+        }
+    }
+}
+
+void vehicle::cruise_thrust( int amount )
+{
+    if( amount == 0 ) {
+        return;
+    }
+    int safe_vel = safe_velocity();
+    int max_vel = max_velocity();
+    int max_rev_vel = -max_vel / 4;
+
+    //if the safe velocity is between the cruise velocity and its next value, set to safe velocity
+    if( ( cruise_velocity < safe_vel && safe_vel < ( cruise_velocity + amount ) ) ||
+        ( cruise_velocity > safe_vel && safe_vel > ( cruise_velocity + amount ) ) ) {
+        cruise_velocity = safe_vel;
+    } else {
+        if( amount < 0 && ( cruise_velocity == safe_vel || cruise_velocity == max_vel ) ) {
+            // If coming down from safe_velocity or max_velocity decrease by one so
+            // the rounding below will drop velocity to a multiple of amount.
+            cruise_velocity += -1;
+        } else if( amount > 0 && cruise_velocity == max_rev_vel ) {
+            // If increasing from max_rev_vel, do the opposite.
+            cruise_velocity += 1;
+        } else {
+            // Otherwise just add the amount.
+            cruise_velocity += amount;
+        }
+        // Integer round to lowest multiple of amount.
+        // The result is always equal to the original or closer to zero,
+        // even if negative
+        cruise_velocity = ( cruise_velocity / abs( amount ) ) * abs( amount );
+    }
+    // Can't have a cruise speed faster than max speed
+    // or reverse speed faster than max reverse speed.
+    if( cruise_velocity > max_vel ) {
+        cruise_velocity = max_vel;
+    } else if( cruise_velocity < max_rev_vel ) {
+        cruise_velocity = max_rev_vel;
+    }
+}
+
 void vehicle::pldrive( int x, int y )
 {
     player &u = g->u;
     int turn_delta = 15 * x;
     const float handling_diff = handling_difficulty();
+    add_msg( "pldrive %d:%d at velocity %d", x, y, velocity );
     if( turn_delta != 0 ) {
         float eff = steering_effectiveness();
         if( eff < 0 ) {
@@ -990,31 +1045,15 @@ bool vehicle::act_on_map()
     if( should_fall ) {
         const float g = 9.8f; // 9.8 m/s^2
         // Convert from 100*mph to m/s
-        const float old_vel = vertical_velocity / 2.23694 / 100;
+        const float old_vel = vmiph_to_mps( vertical_velocity );
         // Formula is v_2 = sqrt( 2*d*g + v_1^2 )
         // Note: That drops the sign
         const float new_vel = -sqrt( 2 * tile_height * g + old_vel * old_vel );
-        vertical_velocity = new_vel * 2.23694 * 100;
+        vertical_velocity = mps_to_vmiph( new_vel );
         falling = true;
     } else {
         // Not actually falling, was just marked for fall test
         falling = false;
-    }
-
-    const int vslowdown = slowdown();
-    if( vslowdown > abs( velocity ) ) {
-        stop();
-    } else if( velocity < 0 ) {
-        velocity += vslowdown;
-    } else {
-        velocity -= vslowdown;
-    }
-
-    // Low enough for bicycles to go in reverse.
-    if( !should_fall && abs( velocity ) < 20 ) {
-        stop();
-        of_turn -= .321f;
-        return true;
     }
 
     const float wheel_traction_area = g->m.vehicle_wheel_traction( *this );
@@ -1046,6 +1085,14 @@ bool vehicle::act_on_map()
             }
         }
     }
+
+    // Low enough for bicycles to go in reverse.
+    if( !should_fall && abs( velocity ) < 20 ) {
+        stop();
+        of_turn -= .321f;
+        return true;
+    }
+
     const float turn_cost = 1000.0f / std::max<float>( 0.0001f, abs( velocity ) );
 
     // Can't afford it this turn?
