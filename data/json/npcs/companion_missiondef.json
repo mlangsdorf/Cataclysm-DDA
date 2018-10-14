@@ -1,0 +1,192 @@
+[
+  {
+    "type": "companion_mission",
+    "id": "_scavenging_patrol",
+    "condition": { "npc_has_mission_role": "SCAVENGER" },
+    "title": "Junk Shop Missions",
+    "name": "Scavenging Patrol",
+    "profit": [ 2500, 50000 ],
+    "danger": "Low",
+    "time": 10,
+    "assign": "individual_mission",
+    "recover": "scavenging_patrol_return",
+    "Description": "Assigning one of your allies to patrol the surrounding wilderness and isolated buildings presents the opportunity to build survival skills while engaging in relatively safe combat against isolated creatures."
+  },
+  {
+    "type": "companion_mission",
+    "id": "_scavenging_raid",
+    "condition": { "and": [ { "npc_has_mission_role": "SCAVENGER" }, { "npc_has_effect": "NPC_MISSION_LEV_1" } ] },
+    "title": "Junk Shop Missions",
+    "name": "Scavenging Raid",
+    "profit": [ 20000, 100000 ],
+    "danger": "Medium",
+    "time": 10,
+    "assign": "individual_mission",
+    "recover": "scavenging_raid_return",
+    "Description": "Scavenging raids target formerly populated areas to loot as many valuable items as possible before being surrounded by the undead.  Combat is to be expected and assistance from the rest of the party can't be guaranteed.  The rewards are greater and there is a chance of the companion bringing back items."
+  },
+  {
+    "type": "companion_mission",
+    "id": "_labor",
+    "condition": { "npc_has_mission_role": "FOREMAN" },
+    "title": "Construction Missions",
+    "name": "Menial Labor",
+    "profit": 800,
+    "profit_per": "hour",
+    "danger": "Minimal",
+    "time": 1,
+    "repeats": true,
+    "assign": "individual_mission",
+    "recover": "labor_return",
+    "Description": "Assigning one of your allies to menial labor is a safe way to teach them basic skills and build reputation with the outpost.  Don't expect much of a reward though."
+  },
+  {
+    "type": "companion_mission",
+    "id": "_carpenter",
+    "condition": { "and": [ { "npc_has_mission_role": "FOREMAN" }, { "npc_has_effect": "NPC_MISSION_LEV_1" } ] },
+    "title": "Construction Missions",
+    "name": "Carpentry Work",
+    "danger": "Minimal",
+    "profit": 1200,
+    "profit_per": "hour",
+    "time": 1,
+    "repeats": true,
+    "assign": "individual_mission",
+    "recover": "carpenter_return",
+    "Description": "Carpentry work requires more skill than menial labor while offering modestly improved pay.  It is unlikely that your companions will face combat but there are hazards working on makeshift buildings."
+  },
+  {
+    "type": "companion_mission",
+    "id": "_commune_crops_purchase",
+    "condition": { "and": [ { "npc_has_mission_role": "COMMUNE_CROPS" }, { "not": { "npc_has_effect": "NPC_MISSION_LEV_1" } } ] },
+    "title": "Agricultural Missions",
+    "name": "Purchase East Field",
+    "profit": -100000,
+    "assign": "field_build_1",
+    "recover": false,
+    "Description": "\n
+.........\n
+.........\n
+.........\n
+.........\n
+.........\n
+.........\n
+..#....**\n
+..#Ov..**\n
+...O|....\n
+\n
+We're willing to let you purchase a field at a substantial discount to use for your own agricultural enterprises.  We'll plow it for you so you know exactly what is yours... after you have a field you can hire workers to plant or harvest crops for you.  If the crop is something we have a demand for, we'll be willing to liquidate it."
+  },
+  {
+    "type": "companion_mission",
+    "id": "_commune_crops_purchase",
+    "condition": { "and": [ { "npc_has_mission_role": "COMMUNE_CROPS" }, { "npc_has_effect": "NPC_MISSION_LEV_1" }, { "not": { "npc_has_effect": "NPC_MISSION_LEV_2" } } ] },
+    "title": "Agricultural Missions",
+    "name": "Purchase East Field",
+    "profit": -550000,
+    "assign": "field_build_2",
+    "recover": false,
+    "Description": "\n
+.........\n
+.........\n
+.........\n
+.........\n
+.........\n
+.........\n
+..#....**\n
+..#Ov..**\n
+...O|....\n
+\n
+Protecting your field with a sturdy picket fence will keep most wildlife from nibbling your crops apart.  You can expect yields to increase."
+  },
+  {
+    "type": "companion_mission",
+    "id": "_commune_crops_plant",
+    "condition": { "and": [ { "npc_has_mission_role": "COMMUNE_CROPS" }, { "npc_has_effect": "NPC_MISSION_LEV_1" } ] },
+    "title": "Agricultural Missions",
+    "name": "Plant East Field",
+    "profit": -300,
+    "profit_per": "plot",
+    "assign": "field_plant",
+    "recover": false,
+    "Description": "\n
+.........\n
+.........\n
+.........\n
+.........\n
+.........\n
+.........\n
+..#....**\n
+..#Ov..**\n
+...O|....\n
+\n
+We'll plant the field with your choice of crop if you are willing to finance it.  When the crop is ready to harvest you can have us liquidate it or harvest it for you."
+  },
+  {
+    "type": "companion_mission",
+    "id": "_commune_crops_harvest",
+    "condition": { "and": [ { "npc_has_mission_role": "COMMUNE_CROPS" }, { "npc_has_effect": "NPC_MISSION_LEV_1" } ] },
+    "title": "Agricultural Missions",
+    "name": "Harvest East Field",
+    "profit": -200,
+    "profit_per": "plot",
+    "assign": "field_harvest",
+    "recover": false,
+    "Description": "\n
+.........\n
+.........\n
+.........\n
+.........\n
+.........\n
+.........\n
+..#....**\n
+..#Ov..**\n
+...O|....\n
+\n
+You can either have us liquidate the crop and give you the cash or pay us to harvest it for you."
+  },
+  {
+    "type": "companion_mission",
+    "id": "_forage",
+    "condition": { "npc_has_mission_role": "COMMUNE_CROPS" },
+    "title": "Agricultural Missions",
+    "name": "Forage for Food",
+    "danger": "Low",
+    "profit": 1000,
+    "time": 4,
+    "repeats": true,
+    "Description": "Foraging for food involves dispatching a companion to search the surrounding wilderness for wild edibles.  Combat will be avoided but encounters with wild animals are to be expected.  The low pay is supplemented with the odd item as a reward for particularly large hauls."
+  },
+  {
+    "type": "companion_mission",
+    "id": "_commune_refugee_caravan",
+    "condition": { "npc_has_mission_role": "COMMUNE_CROPS" },
+    "title": "Agricultural Missions",
+    "name": "Caravan Commune-Refugee Center",
+    "danger": "High",
+    "profit": 1800,
+    "profit_per": "hour",
+    "time": "varies",
+    "assign": "group_mission",
+    "group_activate": "caravan_depart",
+    "recover": "caravan_return",
+    "location": "ranch_garage",
+    "Description": "Adding companions to the caravan team increases the likelihood of success.  By nature, caravans are extremely tempting targets for raiders or hostile groups so only a strong party is recommended.  The rewards are significant for those participating but are even more important for the factions that profit.\n \nThe commune is sending food to the Free Merchants in the Refugee Center as part of a tax and in exchange for skilled labor."
+  },
+  {
+    "type": "companion_mission",
+    "id": "_refugee_commune_caravan",
+    "condition": { "npc_has_mission_role": "REFUGEE MERCHANT" },
+    "title": "Free Merchant Missions",
+    "name": "Caravan Refugee Center-Commune",
+    "danger": "High",
+    "profit": 1800,
+    "profit_per": "hour",
+    "time": "varies",
+    "assign": "group_mission",
+    "group_activate": "caravan_depart",
+    "recover": "caravan_return",
+    "location": "evac_center_18",
+    "Description": "Adding companions to the caravan team increases the likelihood of success.  By nature, caravans are extremely tempting targets for raiders or hostile groups so only a strong party is recommended.  The rewards are significant for those participating but are even more important for the factions that profit.\n \nThe Free Merchants are sending skilled labor and materials to the commune in exchange for food."
+  }
+]
