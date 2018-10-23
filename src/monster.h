@@ -273,7 +273,7 @@ class monster : public Creature
         void deal_projectile_attack( Creature *source, dealt_projectile_attack &attack,
                                      bool print_messages = true ) override;
         void deal_damage_handle_type( const damage_unit &du, body_part bp, int &damage,
-                                      int &pain ) override;
+                                      int &pain, bool simulated = false ) override;
         void apply_damage( Creature *source, body_part bp, int amount,
                            const bool bypass_med = false ) override;
         // create gibs/meat chunks/blood etc all over the place, does not kill, can be called on a dead monster.
@@ -305,6 +305,9 @@ class monster : public Creature
 
         float power_rating() const override;
         float speed_rating() const override;
+        int turns_to_kill( Creature &target ) override;
+        damage_instance average_damage( bool melee ) const override;
+        void average_absorb_hit( body_part bp, damage_instance &dam ) override;
 
         int  get_armor_cut( body_part bp ) const override; // Natural armor, plus any worn armor
         int  get_armor_bash( body_part bp ) const override; // Natural armor, plus any worn armor

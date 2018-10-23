@@ -197,6 +197,16 @@ class Creature
         // TODO: this is just a shim so knockbacks work
         virtual void knock_back_from( const tripoint &p ) = 0;
 
+        // calculate how quickly this creature kills another, in turns
+        virtual int turns_to_kill( Creature &target );
+        // calculate how quickly this creature kills another, in attacks
+        virtual int hits_to_kill( Creature &target );
+        // calculate expected damage for an attack from source
+        virtual double approx_damage_per_attack( Creature &source );
+        virtual damage_instance average_damage( bool melee ) const;
+        /** estimates how much damage our armor absorbs against an attack */
+        virtual void average_absorb_hit( body_part bp, damage_instance &dam );
+
         // begins a melee attack against the creature
         // returns hit - dodge (>=0 = hit, <0 = miss)
         virtual int deal_melee_attack( Creature *source, int hitroll );
@@ -227,8 +237,10 @@ class Creature
                 const damage_instance &d );
         // for each damage type, how much gets through and how much pain do we
         // accrue? mutates damage and pain
+        // @param simulated just calculate damage, don't apply pain or effects
         virtual void deal_damage_handle_type( const damage_unit &du,
-                                              body_part bp, int &damage, int &pain );
+                                              body_part bp, int &damage, int &pain,
+                                              bool simulated = false );
         // directly decrements the damage. ONLY handles damage, doesn't
         // increase pain, apply effects, etc
         virtual void apply_damage( Creature *source, body_part bp, int amount,

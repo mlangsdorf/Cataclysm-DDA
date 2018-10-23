@@ -52,6 +52,8 @@ const std::set<material_id> Creature::cmat_flameres{
     material_id( "stone" ), material_id( "kevlar" ), material_id( "steel" )
 };
 
+int size_melee_penalty( m_size target_size );
+
 Creature::Creature()
 {
     moves = 0;
@@ -338,6 +340,61 @@ Creature *Creature::auto_find_hostile_target( int range, int &boo_hoo, int area 
         best_target_rating = target_rating;
     }
     return target;
+}
+
+#include <stdio.h>
+/*
+ * Threat evaluation
+ */
+int Creature::turns_to_kill( Creature &target )
+{
+    return hits_to_kill( target );
+}
+
+int Creature::hits_to_kill( Creature &target )
+{
+    double dpattk = target.approx_damage_per_attack( *this );
+    int result = static_cast<int>( target.get_hp() / dpattk );
+    return result;
+}
+
+double Creature::approx_damage_per_attack( Creature &source )
+{
+    const double mindamage = 0.05;
+    // hit_spread is normal_roll( 5 * source.get_hit(), 25 ) - ( dodge_roll + size_melee_penalty() )
+    int target_defense = dodge_roll() + size_melee_penalty( get_size() );
+    // 50% chance of hitting if 5 * git_hit() == target_defense
+    double hit_percent = 0.50 + ( 5 * source.get_hit() - target_defense ) / 100.0;
+    if( hit_percent < 0 ) {
+        return mindamage;
+    }
+    // cap at 100
+    hit_percent = std::min( 1.0, hit_percent );
+    damage_instance damage = source.average_damage( true );
+    body_part bp_hit = get_body_part_token( "TORSO" );
+    // blocking reduces damage by some amount - assume 25% maybe?
+    damage.mult_damage( 0.75, true );
+    average_absorb_hit( bp_hit, damage );
+    double total_damage = 0;
+    int total_pain = 0;
+    for( const auto &it : damage.damage_units ) {
+        int cur_damage = 0;
+        deal_damage_handle_type( it, bp_hit, cur_damage, total_pain, true );
+        if( cur_damage > 0 ) {
+            total_damage += cur_damage;
+        }
+    }
+    return std::max( mindamage, total_damage * hit_percent );
+}
+
+damage_instance Creature::average_damage( bool ) const
+{
+    damage_instance damage = damage_instance();
+    return damage;
+}
+
+void Creature::average_absorb_hit( body_part, damage_instance & )
+{
 }
 
 /*
@@ -684,7 +741,7 @@ dealt_damage_instance Creature::deal_damage( Creature *source, body_part bp,
     return dealt_dams;
 }
 void Creature::deal_damage_handle_type( const damage_unit &du, body_part bp, int &damage,
-                                        int &pain )
+                                        int &pain, bool simulated )
 {
     // Handles ACIDPROOF, electric immunity etc.
     if( is_immune_damage( du.type ) ) {
@@ -694,6 +751,10 @@ void Creature::deal_damage_handle_type( const damage_unit &du, body_part bp, int
     // Apply damage multiplier from skill, critical hits or grazes after all other modifications.
     const int adjusted_damage = du.amount * du.damage_multiplier;
     if( adjusted_damage <= 0 ) {
+        return;
+    }
+    if( simulated ) {
+        damage += adjusted_damage;
         return;
     }
 

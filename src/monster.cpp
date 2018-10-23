@@ -1154,6 +1154,29 @@ void monster::absorb_hit( body_part, damage_instance &dam )
     }
 }
 
+int monster::turns_to_kill( Creature &target )
+{
+    int htk = hits_to_kill( target );
+    return static_cast<int>( htk * type->attack_cost / get_speed() );
+}
+
+damage_instance monster::average_damage( bool melee ) const
+{
+    damage_instance damage;
+    if( melee ) {
+        damage = type->melee_damage;
+        damage.add_damage( DT_BASH, type->melee_dice * ( 1 + type->melee_sides ) / 2 );
+    } else {
+        damage = damage_instance();
+    }
+    return damage;
+}
+
+void monster::average_absorb_hit( body_part bp, damage_instance &dam )
+{
+    absorb_hit( bp, dam );
+}
+
 void monster::melee_attack( Creature &target )
 {
     melee_attack( target, get_hit() );
@@ -1337,7 +1360,7 @@ void monster::deal_projectile_attack( Creature *source, dealt_projectile_attack 
 }
 
 void monster::deal_damage_handle_type( const damage_unit &du, body_part bp, int &damage,
-                                       int &pain )
+                                       int &pain, bool simulated )
 {
     switch( du.type ) {
         case DT_ELECTRIC:
@@ -1373,7 +1396,7 @@ void monster::deal_damage_handle_type( const damage_unit &du, body_part bp, int 
             break;
     }
 
-    Creature::deal_damage_handle_type( du, bp, damage, pain );
+    Creature::deal_damage_handle_type( du, bp, damage, pain, simulated );
 }
 
 int monster::heal( const int delta_hp, bool overheal )
