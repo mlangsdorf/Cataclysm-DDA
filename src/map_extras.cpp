@@ -129,6 +129,11 @@ void mx_helicopter( map &m, const tripoint &abs_sub )
     vehicle *wreckage = m.add_vehicle( crashed_hull, tripoint( x1, y1, abs_sub.z ), dir1, rng( 1, 33 ),
                                        1 );
 
+    const auto controls_at = []( vehicle * wreckage, const tripoint & pos ) {
+        return !wreckage->get_parts( pos, "CONTROLS", false, true, false ).empty() ||
+               !wreckage->get_parts( pos, "CTRL_ELECTRONIC", false, true, false ).empty();
+    };
+
     if( wreckage != nullptr ) {
         const int clowncar_factor = dice( 1, 8 );
 
@@ -140,8 +145,7 @@ void mx_helicopter( map &m, const tripoint &abs_sub )
                     const vehicle_part *const p = &vp.vehicle().parts[vp.part_index()];
                     const auto pos = wreckage->global_part_pos3( *p );
                     // Spawn pilots in seats with controls.CTRL_ELECTRONIC
-                    if( wreckage->get_parts( pos, "CONTROLS", false, true ).size() > 0 ||
-                        wreckage->get_parts( pos, "CTRL_ELECTRONIC", false, true ).size() > 0 ) {
+                    if( controls_at( wreckage, pos ) ) {
                         m.add_spawn( mon_zombie_military_pilot, 1, pos.x, pos.y );
                     } else {
                         if( one_in( 5 ) ) {
@@ -169,8 +173,8 @@ void mx_helicopter( map &m, const tripoint &abs_sub )
                     const vehicle_part *const p = &vp.vehicle().parts[vp.part_index()];
                     auto pos = wreckage->global_part_pos3( *p );
                     // Spawn pilots in seats with controls.
-                    if( wreckage->get_parts( pos, "CONTROLS", false, true ).size() > 0  ||
-                        wreckage->get_parts( pos, "CTRL_ELECTRONIC", false, true ).size() > 0 ) {
+                    // Spawn pilots in seats with controls.CTRL_ELECTRONIC
+                    if( controls_at( wreckage, pos ) ) {
                         m.add_spawn( mon_zombie_military_pilot, 1, pos.x, pos.y );
                     } else {
                         if( !one_in( 3 ) ) {

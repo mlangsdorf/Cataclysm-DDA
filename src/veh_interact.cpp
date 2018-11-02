@@ -547,7 +547,7 @@ bool veh_interact::can_self_jack()
 {
     int lvl = jack_quality( *veh );
 
-    for( const vpart_reference &vp : veh->get_parts( "SELF_JACK" ) ) {
+    for( const vpart_reference &vp : veh->get_avail_parts( "SELF_JACK" ) ) {
         const vehicle_part *const jack = &vp.vehicle().parts[vp.part_index()];
         if( jack->base.has_quality( SELF_JACK, lvl ) ) {
             return true;
@@ -596,10 +596,9 @@ bool veh_interact::can_install_part() {
     int engines = 0;
     int dif_eng = 0;
     if( is_engine && sel_vpart_info->has_flag( "E_HIGHER_SKILL" ) ) {
-        for( const vpart_reference &vp : veh->get_parts() ) {
+        for( const vpart_reference &vp : veh->get_avail_parts( "ENGINE" ) ) {
             const size_t p = vp.part_index();
-            if( veh->part_flag( p, "ENGINE" ) &&
-                veh->part_flag( p, "E_HIGHER_SKILL" ) ) {
+            if( veh->part_flag( p, "E_HIGHER_SKILL" ) ) {
                 engines++;
                 dif_eng = dif_eng / 2 + 8;
             }
