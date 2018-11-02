@@ -3070,18 +3070,16 @@ float vehicle::strain() const
 
 bool vehicle::sufficient_wheel_config( bool boat ) const
 {
-    const auto floats = get_parts( VPFLAG_FLOATS );
     // @todo: Remove the limitations that boats can't move on land
-    if( boat || !empty( floats ) ) {
-        return boat && size( floats ) > 2;
+    if( boat || !floating.empty() ) {
+        return boat && floating.size() > 2;
     }
-    const auto wheels = get_parts( VPFLAG_WHEEL );
-    if( empty( wheels ) ) {
+    if( wheelcache.empty() ) {
         // No wheels!
         return false;
-    } else if( size( wheels ) == 1 ) {
+    } else if( wheelcache.size() == 1 ) {
         //Has to be a stable wheel, and one wheel can only support a 1-3 tile vehicle
-        if( !part_info( ( *wheels.begin() ).part_index() ).has_flag( "STABLE" ) ||
+        if( !part_info( wheelcache.front() ).has_flag( "STABLE" ) ||
             all_parts_at_location( part_location_structure ).size() > 3 ) {
             return false;
         }
