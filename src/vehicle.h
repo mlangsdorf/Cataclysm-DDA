@@ -1388,8 +1388,6 @@ class vehicle
         std::vector<int> loose_parts;      // List of UNMOUNT_ON_MOVE parts
         std::vector<int> wheelcache;       // List of wheels
         std::vector<int> steering;         // List of STEERABLE parts
-        std::vector<int>
-        speciality;       // List of parts that will not be on a vehicle very often, or which only one will be present
         std::vector<int> floating;         // List of parts that provide buoyancy to boats
         std::set<std::string> tags;        // Properties of the vehicle
         // After fuel consumption, this tracks the remainder of fuel < 1, and applies it the next time.
@@ -1461,11 +1459,6 @@ class vehicle
         // leftover from previous turn
         float of_turn_carry;
 
-        // total power consumed by tracking devices (why would you use more than one?)
-        int tracking_epower     = 0;
-        int alarm_epower        = 0;
-        // power consumed by camera system
-        int camera_epower       = 0;
         int extra_drag          = 0;
         // TODO: change these to a bitset + enum?
         // cruise control on/off

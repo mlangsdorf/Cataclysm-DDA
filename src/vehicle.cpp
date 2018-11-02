@@ -3266,13 +3266,6 @@ void vehicle::power_parts()
         epower += pt->info().epower;
     }
 
-    // Consumers of epower
-    if( is_alarm_on ) {
-        epower += alarm_epower;
-    }
-    if( camera_on ) {
-        epower += camera_epower;
-    }
     // Engines: can both produce (plasma) or consume (gas, diesel)
     // Gas engines require epower to run for ignition system, ECU, etc.
     // Electric motor consumption not included, see @ref vpart_info::energy_consumption
@@ -3924,11 +3917,8 @@ void vehicle::refresh()
     loose_parts.clear();
     wheelcache.clear();
     steering.clear();
-    speciality.clear();
     floating.clear();
-    tracking_epower = 0;
     alternator_load = 0;
-    camera_epower = 0;
     extra_drag = 0;
     // Used to sort part list so it displays properly when examining
     struct sort_veh_part_vector {
