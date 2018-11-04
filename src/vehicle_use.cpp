@@ -80,7 +80,7 @@ void vehicle::add_toggle_to_opts( std::vector<uimenu_entry> &options,
                                   const std::string &flag )
 {
     // fetch matching parts and abort early if none found
-    const auto found = get_parts( flag );
+    const auto found = get_avail_parts( flag );
     if( empty( found ) ) {
         return;
     }
@@ -118,7 +118,7 @@ void vehicle::add_toggle_to_opts( std::vector<uimenu_entry> &options,
 
 void vehicle::control_doors()
 {
-    const auto door_motors = get_parts( "DOOR_MOTOR" );
+    const auto door_motors = get_avail_parts( "DOOR_MOTOR" );
     std::vector< int > doors_with_motors; // Indices of doors
     std::vector< tripoint > locations; // Locations used to display the doors
     // it is possible to have one door to open and one to close for single motor
@@ -383,13 +383,10 @@ void vehicle::smash_security_system()
     //get security and controls location
     int s = -1;
     int c = -1;
-    for( size_t d = 0; d < speciality.size(); d++ ) {
-        int p = speciality[d];
-        if( part_flag( p, "SECURITY" ) && !parts[ p ].is_broken() ) {
-            s = p;
-            c = part_with_feature( s, "CONTROLS", true );
-            break;
-        }
+    for( const vpart_reference &vp : get_avail_parts( "SECURITY" ) ) {
+        s = vp.part_index();
+        c = part_with_feature( s, "CONTROLS", true );
+        break;
     }
     //controls and security must both be valid
     if( c >= 0 && s >= 0 ) {
@@ -469,10 +466,10 @@ void vehicle::use_controls( const tripoint &pos )
                 refresh();
             } );
         }
-        has_electronic_controls = !get_parts( pos, "CTRL_ELECTRONIC", false, false ).empty();
+        has_electronic_controls = !get_parts( pos, "CTRL_ELECTRONIC", false, false, true ).empty();
     }
 
-    if( get_parts( pos, "CONTROLS", false, false ).empty() && !has_electronic_controls ) {
+    if( get_parts( pos, "CONTROLS", false, false, true ).empty() && !has_electronic_controls ) {
         add_msg( m_info, _( "No controls there" ) );
         return;
     }
@@ -823,7 +820,7 @@ void vehicle::honk_horn()
     const bool no_power = ! fuel_left( fuel_type_battery, true );
     bool honked = false;
 
-    for( const vpart_reference &vp : get_parts( "HORN" ) ) {
+    for( const vpart_reference &vp : get_avail_parts( "HORN" ) ) {
         //Only bicycle horn doesn't need electricity to work
         const vpart_info &horn_type = vp.info();
         if( ( horn_type.get_id() != vpart_id( "horn_bicycle" ) ) && no_power ) {
@@ -861,7 +858,7 @@ void vehicle::beeper_sound()
     }
 
     const bool odd_turn = calendar::once_every( 2_turns );
-    for( const vpart_reference &vp : get_parts( "BEEPER" ) ) {
+    for( const vpart_reference &vp : get_avail_parts( "BEEPER" ) ) {
         if( ( odd_turn && vp.has_feature( VPFLAG_EVENTURN ) ) ||
             ( !odd_turn && vp.has_feature( VPFLAG_ODDTURN ) ) ) {
             continue;
@@ -893,7 +890,7 @@ void vehicle::play_chimes()
 
 void vehicle::operate_plow()
 {
-    for( const vpart_reference &vp : get_parts( "PLOW" ) ) {
+    for( const vpart_reference &vp : get_avail_parts( "PLOW" ) ) {
         const tripoint start_plow = vp.pos();
         if( g->m.has_flag( "DIGGABLE", start_plow ) ) {
             g->m.ter_set( start_plow, t_dirtmound );
@@ -908,7 +905,7 @@ void vehicle::operate_plow()
 
 void vehicle::operate_rockwheel()
 {
-    for( const vpart_reference &vp : get_parts( "ROCKWHEEL" ) ) {
+    for( const vpart_reference &vp : get_avail_parts( "ROCKWHEEL" ) ) {
         const tripoint start_dig = vp.pos();
         if( g->m.has_flag( "DIGGABLE", start_dig ) ) {
             g->m.ter_set( start_dig, t_pit_shallow );
@@ -923,7 +920,7 @@ void vehicle::operate_rockwheel()
 
 void vehicle::operate_reaper()
 {
-    for( const vpart_reference &vp : get_parts( "REAPER" ) ) {
+    for( const vpart_reference &vp : get_avail_parts( "REAPER" ) ) {
         const size_t reaper_id = vp.part_index();
         const tripoint reaper_pos = vp.pos();
         const int plant_produced =  rng( 1, vp.info().bonus );
@@ -962,7 +959,7 @@ void vehicle::operate_reaper()
 
 void vehicle::operate_planter()
 {
-    for( const vpart_reference &vp : get_parts( "PLANTER" ) ) {
+    for( const vpart_reference &vp : get_avail_parts( "PLANTER" ) ) {
         const size_t planter_id = vp.part_index();
         const tripoint loc = vp.pos();
         vehicle_stack v = get_items( planter_id );
@@ -998,7 +995,7 @@ void vehicle::operate_planter()
 
 void vehicle::operate_scoop()
 {
-    for( const vpart_reference &vp : get_parts( "SCOOP" ) ) {
+    for( const vpart_reference &vp : get_avail_parts( "SCOOP" ) ) {
         const size_t scoop = vp.part_index();
         const int chance_to_damage_item = 9;
         const units::volume max_pickup_volume = vp.info().size / 10;
@@ -1137,7 +1134,7 @@ void vehicle::open_or_close( int const part_index, bool const opening )
      * Openable parts, and stops trunks from opening side doors and the like. */
     for( const vpart_reference &vp : get_parts() ) {
         const size_t next_index = vp.part_index();
-        if( vp.part().removed ) {
+        if( vp.part().removed || vp.part().is_unavailable() ) {
             continue;
         }
 

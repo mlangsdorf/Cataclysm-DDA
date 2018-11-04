@@ -674,14 +674,7 @@ bool vehicle::is_alternator_on( int const a ) const
 
 bool vehicle::has_security_working() const
 {
-    bool found_security = false;
-    for( size_t s = 0; s < speciality.size(); s++ ) {
-        if( part_flag( speciality[ s ], "SECURITY" ) && parts[ speciality[ s ] ].is_available() ) {
-            found_security = true;
-            break;
-        }
-    }
-    return found_security;
+    return !empty( get_avail_parts( "SECURITY" ) );
 }
 
 void vehicle::backfire( const int e ) const
@@ -2088,7 +2081,7 @@ bool vehicle::has_part( const tripoint &pos, const std::string &flag, bool enabl
 }
 
 std::vector<vehicle_part *> vehicle::get_parts( const tripoint &pos, const std::string &flag,
-        bool enabled, bool include_broken_parts )
+        bool enabled, bool include_broken_parts, bool avail )
 {
     const tripoint relative_pos = pos - global_pos3();
     std::vector<vehicle_part *> res;
@@ -2097,7 +2090,7 @@ std::vector<vehicle_part *> vehicle::get_parts( const tripoint &pos, const std::
             continue;
         }
         if( !e.removed && ( !enabled || e.enabled ) && ( !e.is_broken() || include_broken_parts ) &&
-            ( flag.empty() || e.info().has_flag( flag ) ) ) {
+            ( e.is_available() || avail ) && ( flag.empty() || e.info().has_flag( flag ) ) ) {
             res.push_back( &e );
         }
     }
@@ -2105,7 +2098,7 @@ std::vector<vehicle_part *> vehicle::get_parts( const tripoint &pos, const std::
 }
 
 std::vector<const vehicle_part *> vehicle::get_parts( const tripoint &pos, const std::string &flag,
-        bool enabled, bool include_broken_parts ) const
+        bool enabled, bool include_broken_parts, bool avail ) const
 {
     const tripoint relative_pos = pos - global_pos3();
     std::vector<const vehicle_part *> res;
@@ -2114,7 +2107,7 @@ std::vector<const vehicle_part *> vehicle::get_parts( const tripoint &pos, const
             continue;
         }
         if( !e.removed && ( !enabled || e.enabled ) && ( !e.is_broken() || include_broken_parts ) &&
-            ( flag.empty() || e.info().has_flag( flag ) ) ) {
+            ( e.is_available() || avail ) && ( flag.empty() || e.info().has_flag( flag ) ) ) {
             res.push_back( &e );
         }
     }
@@ -2183,41 +2176,54 @@ int vehicle::next_part_to_open( int p, bool outside ) const
 vehicle_part_with_feature_range<std::string> vehicle::get_parts( std::string feature ) const
 {
     return vehicle_part_with_feature_range<std::string>( const_cast<vehicle &>( *this ),
-            std::move( feature ), true, false );
+            std::move( feature ), true, false, false );
 }
 
 vehicle_part_with_feature_range<vpart_bitflags> vehicle::get_parts( const vpart_bitflags feature )
 const
 {
     return vehicle_part_with_feature_range<vpart_bitflags>( const_cast<vehicle &>( *this ), feature,
-            true, false );
+            true, false, false );
 }
 
 vehicle_part_with_feature_range<std::string> vehicle::get_parts_including_broken(
     std::string feature ) const
 {
     return vehicle_part_with_feature_range<std::string>( const_cast<vehicle &>( *this ),
-            std::move( feature ), false, false );
+            std::move( feature ), false, false, false );
 }
 
 vehicle_part_with_feature_range<vpart_bitflags> vehicle::get_parts_including_broken(
     const vpart_bitflags feature ) const
 {
     return vehicle_part_with_feature_range<vpart_bitflags>( const_cast<vehicle &>( *this ), feature,
-            false, false );
+            false, false, false );
 }
 
 vehicle_part_with_feature_range<std::string> vehicle::get_enabled_parts( std::string feature ) const
 {
     return vehicle_part_with_feature_range<std::string>( const_cast<vehicle &>( *this ),
-            std::move( feature ), false, true );
+            std::move( feature ), false, true, false );
 }
 
 vehicle_part_with_feature_range<vpart_bitflags> vehicle::get_enabled_parts(
     const vpart_bitflags feature ) const
 {
     return vehicle_part_with_feature_range<vpart_bitflags>( const_cast<vehicle &>( *this ), feature,
-            false, true );
+            false, true, false );
+}
+
+vehicle_part_with_feature_range<std::string> vehicle::get_avail_parts( std::string feature ) const
+{
+    return vehicle_part_with_feature_range<std::string>( const_cast<vehicle &>( *this ),
+            std::move( feature ), false, true, true );
+}
+
+vehicle_part_with_feature_range<vpart_bitflags> vehicle::get_avail_parts(
+    const vpart_bitflags feature ) const
+{
+    return vehicle_part_with_feature_range<vpart_bitflags>( const_cast<vehicle &>( *this ), feature,
+            false, true, true );
 }
 
 /**
@@ -2870,13 +2876,11 @@ void vehicle::noise_and_smoke( double load, double time )
     double muffle = 1.0;
     double m = 0.0;
     int exhaust_part = -1;
-    for( const vpart_reference &vp : get_parts() ) {
-        if( vp.has_feature( "MUFFLER" ) ) {
-            m = 1.0 - ( 1.0 - vp.info().bonus / 100.0 ) * vp.part().health_percent();
-            if( m < muffle ) {
-                muffle = m;
-                exhaust_part = int( vp.part_index() );
-            }
+    for( const vpart_reference &vp : get_avail_parts( "MUFFLER" ) ) {
+        m = 1.0 - ( 1.0 - vp.info().bonus / 100.0 ) * vp.part().health_percent();
+        if( m < muffle ) {
+            muffle = m;
+            exhaust_part = int( vp.part_index() );
         }
     }
 
@@ -3042,12 +3046,11 @@ float vehicle::strain() const
 
 bool vehicle::sufficient_wheel_config( bool boat ) const
 {
-    const auto floats = get_parts( VPFLAG_FLOATS );
     // @todo: Remove the limitations that boats can't move on land
-    if( boat || !empty( floats ) ) {
-        return boat && size( floats ) > 2;
+    if( boat || !floating.empty() ) {
+        return boat && floating.size() > 2;
     }
-    const auto wheels = get_parts( VPFLAG_WHEEL );
+    const auto wheels = get_avail_parts( VPFLAG_WHEEL );
     if( empty( wheels ) ) {
         // No wheels!
         return false;
@@ -3239,13 +3242,6 @@ void vehicle::power_parts()
         epower += vp.info().epower;
     }
 
-    // Consumers of epower
-    if( is_alarm_on ) {
-        epower += alarm_epower;
-    }
-    if( camera_on ) {
-        epower += camera_epower;
-    }
     // Engines: can both produce (plasma) or consume (gas, diesel)
     // Gas engines require epower to run for ignition system, ECU, etc.
     // Electric motor consumption not included, see @ref vpart_info::energy_consumption
@@ -3315,7 +3311,7 @@ void vehicle::power_parts()
 
         if( !reactor_working ) {
             // All reactors out of fuel or destroyed
-            for( const vpart_reference &vp : get_parts( "REACTOR" ) ) {
+            for( const vpart_reference &vp : get_avail_parts( "REACTOR" ) ) {
                 vp.part().enabled = false;
             }
             if( player_in_control( g->u ) || g->u.sees( global_pos3() ) ) {
@@ -3335,15 +3331,15 @@ void vehicle::power_parts()
 
     if( battery_deficit != 0 ) {
         // Scoops need a special case since they consume power during actual use
-        for( const vpart_reference &vp : get_parts( "SCOOP" ) ) {
+        for( const vpart_reference &vp : get_avail_parts( "SCOOP" ) ) {
             vp.part().enabled = false;
         }
         // Rechargers need special case since they consume power on demand
-        for( const vpart_reference &vp : get_parts( "RECHARGE" ) ) {
+        for( const vpart_reference &vp : get_avail_parts( "RECHARGE" ) ) {
             vp.part().enabled = false;
         }
 
-        for( const vpart_reference &vp : get_parts( VPFLAG_ENABLED_DRAINS_EPOWER ) ) {
+        for( const vpart_reference &vp : get_avail_parts( VPFLAG_ENABLED_DRAINS_EPOWER ) ) {
             vehicle_part &pt = vp.part();
             if( pt.info().epower < 0 ) {
                 pt.enabled = false;
@@ -3630,7 +3626,7 @@ void vehicle::make_active( item_location &loc )
     if( !target->needs_processing() ) {
         return;
     }
-    auto cargo_parts = get_parts( loc.position(), "CARGO", false, false );
+    auto cargo_parts = get_parts( loc.position(), "CARGO", false, false, false );
     if( cargo_parts.empty() ) {
         return;
     }
@@ -3893,11 +3889,8 @@ void vehicle::refresh()
     loose_parts.clear();
     wheelcache.clear();
     steering.clear();
-    speciality.clear();
     floating.clear();
-    tracking_epower = 0;
     alternator_load = 0;
-    camera_epower = 0;
     extra_drag = 0;
     // Used to sort part list so it displays properly when examining
     struct sort_veh_part_vector {
@@ -3915,13 +3908,14 @@ void vehicle::refresh()
         if( vp.part().removed ) {
             continue;
         }
-        if( vpi.has_flag( VPFLAG_ALTERNATOR ) ) {
+        const bool avail = vp.part().is_available();
+        if( avail && vpi.has_flag( VPFLAG_ALTERNATOR ) ) {
             alternators.push_back( p );
         }
-        if( vpi.has_flag( VPFLAG_ENGINE ) ) {
+        if( avail && vpi.has_flag( VPFLAG_ENGINE ) ) {
             engines.push_back( p );
         }
-        if( vpi.has_flag( "REACTOR" ) ) {
+        if( avail && vpi.has_flag( "REACTOR" ) ) {
             reactors.push_back( p );
         }
         if( vpi.has_flag( VPFLAG_SOLAR_PANEL ) ) {
@@ -3933,25 +3927,19 @@ void vehicle::refresh()
         if( vpi.has_flag( "UNMOUNT_ON_MOVE" ) ) {
             loose_parts.push_back( p );
         }
-        if( vpi.has_flag( VPFLAG_WHEEL ) ) {
+        if( avail && vpi.has_flag( VPFLAG_WHEEL ) ) {
             wheelcache.push_back( p );
         }
-        if( vpi.has_flag( "STEERABLE" ) || vpi.has_flag( "TRACKED" ) ) {
+        if( avail && ( vpi.has_flag( "STEERABLE" ) || vpi.has_flag( "TRACKED" ) ) ) {
             // TRACKED contributes to steering effectiveness but
             //  (a) doesn't count as a steering axle for install difficulty
             //  (b) still contributes to drag for the center of steering calculation
             steering.push_back( p );
         }
-        if( vpi.has_flag( "SECURITY" ) ) {
-            speciality.push_back( p );
-        }
-        if( vpi.has_flag( "CAMERA" ) ) {
-            camera_epower += vpi.epower;
-        }
-        if( vpi.has_flag( VPFLAG_FLOATS ) ) {
+        if( avail && vpi.has_flag( VPFLAG_FLOATS ) ) {
             floating.push_back( p );
         }
-        if( vp.part().enabled && vpi.has_flag( "EXTRA_DRAG" ) ) {
+        if( avail && vp.part().enabled && vpi.has_flag( "EXTRA_DRAG" ) ) {
             extra_drag += vpi.power;
         }
         // Build map of point -> all parts in that point
@@ -4819,7 +4807,8 @@ bool vehicle_part_with_feature_range<std::string>::contained( const size_t part 
     return vp.info().has_flag( feature_ ) &&
            !vp.removed &&
            ( !unbroken_ || !vp.is_broken() ) &&
-           ( !enabled_ || vp.enabled );
+           ( !enabled_ || vp.enabled ) &&
+           ( !avail_ || vp.is_available() );
 }
 
 template<>
@@ -4829,5 +4818,6 @@ bool vehicle_part_with_feature_range<vpart_bitflags>::contained( const size_t pa
     return vp.info().has_flag( feature_ ) &&
            !vp.removed &&
            ( !unbroken_ || !vp.is_broken() ) &&
-           ( !enabled_ || vp.enabled );
+           ( !enabled_ || vp.enabled ) &&
+           ( !avail_ || vp.is_available() );
 }

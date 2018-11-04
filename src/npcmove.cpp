@@ -655,7 +655,7 @@ void npc::execute_action( npc_action action )
 
                 // a seat is available if either unassigned or assigned to us
                 auto available_seat = [&]( const vehicle_part & pt ) {
-                    if( !pt.is_seat() ) {
+                    if( !pt.is_seat() || pt.is_unavailable() ) {
                         return false;
                     }
                     const npc *who = pt.crew();

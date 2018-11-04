@@ -547,7 +547,7 @@ bool veh_interact::can_self_jack()
 {
     int lvl = jack_quality( *veh );
 
-    for( const vpart_reference &vp : veh->get_parts( "SELF_JACK" ) ) {
+    for( const vpart_reference &vp : veh->get_avail_parts( "SELF_JACK" ) ) {
         if( vp.part().base.has_quality( SELF_JACK, lvl ) ) {
             return true;
         }
@@ -595,8 +595,8 @@ bool veh_interact::can_install_part() {
     int engines = 0;
     int dif_eng = 0;
     if( is_engine && sel_vpart_info->has_flag( "E_HIGHER_SKILL" ) ) {
-        for( const vpart_reference &vp : veh->get_parts() ) {
-            if( vp.has_feature( "ENGINE" ) && vp.has_feature( "E_HIGHER_SKILL" ) ) {
+        for( const vpart_reference &vp : veh->get_avail_parts( "ENGINE" ) ) {
+            if( vp.has_feature( "E_HIGHER_SKILL" ) ) {
                 engines++;
                 dif_eng = dif_eng / 2 + 8;
             }
@@ -1928,8 +1928,8 @@ void veh_interact::display_veh ()
 
 static std::string wheel_state_description( const vehicle &veh )
 {
-    bool is_boat = !empty( veh.get_parts( VPFLAG_FLOATS ) );
-    bool is_land = !empty( veh.get_parts( VPFLAG_WHEEL ) );
+    bool is_boat = !veh.floating.empty();
+    bool is_land = !veh.wheelcache.empty();
 
     bool suf_land = veh.sufficient_wheel_config( false );
     bool bal_land = veh.balanced_wheel_config( false );
@@ -2072,7 +2072,7 @@ void veh_interact::display_stats()
         print_part( needsRepair, 7, most_repairable );
     }
 
-    bool is_boat = !empty( veh->get_parts( VPFLAG_FLOATS ) );
+    bool is_boat = !veh->floating.empty();
 
     fold_and_print(w_stats, y[8], x[8], w[8], c_light_gray,
                    _("K aerodynamics: <color_light_blue>%3d</color>%%"),
