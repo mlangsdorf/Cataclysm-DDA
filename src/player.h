@@ -686,6 +686,13 @@ class player : public Character
         /** Returns a value used when attempting to intimidate NPC's */
         int intimidation() const;
 
+        /** estimate how quickly this player can kill a target */
+        int turns_to_kill( Creature &target ) override;
+        /** estimates damage using current weapon */
+        damage_instance average_damage( bool melee ) const override;
+        /** estimates how much damage our armor absorbs against an attack */
+        void average_absorb_hit( body_part bp, damage_instance &dam ) override;
+
         /**
          * Check if a given body part is immune to a given damage type
          *

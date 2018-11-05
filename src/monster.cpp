@@ -1154,6 +1154,29 @@ void monster::absorb_hit( body_part, damage_instance &dam )
     }
 }
 
+int monster::turns_to_kill( Creature &target )
+{
+    int htk = hits_to_kill( target );
+    return static_cast<int>( htk * type->attack_cost / get_speed() );
+}
+
+damage_instance monster::average_damage( bool melee ) const
+{
+    damage_instance damage;
+    if( melee ) {
+        damage = type->melee_damage;
+        damage.add_damage( DT_BASH, type->melee_dice * ( 1 + type->melee_sides ) / 2 );
+    } else {
+        damage = damage_instance();
+    }
+    return damage;
+}
+
+void monster::average_absorb_hit( body_part bp, damage_instance &dam )
+{
+    absorb_hit( bp, dam );
+}
+
 void monster::melee_attack( Creature &target )
 {
     melee_attack( target, get_hit() );
@@ -1161,15 +1184,14 @@ void monster::melee_attack( Creature &target )
 
 void monster::melee_attack( Creature &target, float accuracy )
 {
-    int hitspread = target.deal_melee_attack( this, melee::melee_hit_range( accuracy ) );
-    mod_moves( -type->attack_cost );
-    if( type->melee_dice == 0 ) {
-        // We don't attack, so just return
+    if( this == &target ) {
+        // This happens sometimes
         return;
     }
 
-    if( this == &target ) {
-        // This happens sometimes
+    mod_moves( -type->attack_cost );
+    if( type->melee_dice <= 0 ) {
+        // We don't attack, so just return
         return;
     }
 
@@ -1183,34 +1205,34 @@ void monster::melee_attack( Creature &target, float accuracy )
         add_effect( effect_run, 4_turns );
     }
 
-    const bool u_see_me = g->u.sees( *this );
-
-    body_part bp_hit;
-
-    damage_instance damage = !is_hallucination() ? type->melee_damage : damage_instance();
-    if( !is_hallucination() && type->melee_dice > 0 ) {
+    damage_instance damage;
+    if( !is_hallucination() ) {
+        damage = type->melee_damage;
         damage.add_damage( DT_BASH, dice( type->melee_dice, type->melee_sides ) );
+    } else {
+        damage = damage_instance();
     }
 
+    int hitspread = target.deal_melee_attack( this, melee::melee_hit_range( accuracy ) );
     dealt_damage_instance dealt_dam;
-
     if( hitspread >= 0 ) {
         target.deal_melee_hit( this, hitspread, false, damage, dealt_dam );
     }
-    bp_hit = dealt_dam.bp_hit;
+    body_part bp_hit = dealt_dam.bp_hit;
 
+    const bool u_see_me = g->u.sees( *this );
     const int total_dealt = dealt_dam.total_damage();
     if( hitspread < 0 ) {
         // Miss
         if( u_see_me && !target.in_sleep_state() ) {
             if( target.is_player() ) {
-                add_msg( _( "You dodge %s." ), disp_name().c_str() );
+                add_msg( _( "You dodge %s." ), disp_name() );
             } else if( target.is_npc() ) {
-                add_msg( _( "%1$s dodges %2$s attack." ),
-                         target.disp_name().c_str(), name().c_str() );
+                //~ $1s is the target name, $2s is monster name
+                add_msg( _( "%1$s dodges %2$s attack." ), target.disp_name(), name() );
             } else {
-                add_msg( _( "The %1$s misses %2$s!" ),
-                         name().c_str(), target.disp_name().c_str() );
+                //~ $1s is monster name, $2s is the target name
+                add_msg( _( "The %1$s misses %2$s!" ), name(), target.disp_name() );
             }
         } else if( target.is_player() ) {
             add_msg( _( "You dodge an attack from an unseen source." ) );
@@ -1223,54 +1245,43 @@ void monster::melee_attack( Creature &target, float accuracy )
                 sfx::play_variant_sound( "melee_attack", "monster_melee_hit",
                                          sfx::get_heard_volume( target.pos() ) );
                 sfx::do_player_death_hurt( dynamic_cast<player &>( target ), 0 );
-                add_msg( m_bad, _( "The %1$s hits your %2$s." ), name().c_str(),
-                         body_part_name_accusative( bp_hit ).c_str() );
+                add_msg( m_bad, _( "The %1$s hits your %2$s." ), name(), body_part_name_accusative( bp_hit ) );
             } else if( target.is_npc() ) {
                 //~ 1$s is attacker name, 2$s is target name, 3$s is bodypart name in accusative.
-                add_msg( _( "The %1$s hits %2$s %3$s." ), name().c_str(),
-                         target.disp_name( true ).c_str(),
-                         body_part_name_accusative( bp_hit ).c_str() );
+                add_msg( _( "The %1$s hits %2$s %3$s." ), name(),
+                         target.disp_name( true ), body_part_name_accusative( bp_hit ) );
             } else {
-                add_msg( _( "The %1$s hits %2$s!" ), name().c_str(), target.disp_name().c_str() );
+                add_msg( _( "The %1$s hits %2$s!" ), name(), target.disp_name() );
             }
         } else if( target.is_player() ) {
             //~ %s is bodypart name in accusative.
-            add_msg( m_bad, _( "Something hits your %s." ),
-                     body_part_name_accusative( bp_hit ).c_str() );
+            add_msg( m_bad, _( "Something hits your %s." ), body_part_name_accusative( bp_hit ) );
         }
     } else {
         // No damage dealt
         if( u_see_me ) {
             if( target.is_player() ) {
                 //~ 1$s is attacker name, 2$s is bodypart name in accusative, 3$s is armor name
-                add_msg( _( "The %1$s hits your %2$s, but your %3$s protects you." ), name().c_str(),
-                         body_part_name_accusative( bp_hit ).c_str(), target.skin_name().c_str() );
+                add_msg( _( "The %1$s hits your %2$s, but your %3$s protects you." ), name(),
+                         body_part_name_accusative( bp_hit ), target.skin_name() );
             } else if( target.is_npc() ) {
                 //~ $1s is monster name, %2$s is that monster target name,
                 //~ $3s is target bodypart name in accusative, $4s is the monster target name,
                 //~ 5$s is target armor name.
-                add_msg( _( "The %1$s hits %2$s %3$s but is stopped by %4$s %5$s." ), name().c_str(),
-                         target.disp_name( true ).c_str(),
-                         body_part_name_accusative( bp_hit ).c_str(),
-                         target.disp_name( true ).c_str(),
-                         target.skin_name().c_str() );
+                add_msg( _( "The %1$s hits %2$s %3$s but is stopped by %4$s %5$s." ), name(),
+                         target.disp_name( true ), body_part_name_accusative( bp_hit ),
+                         target.disp_name( true ), target.skin_name() );
             } else {
                 //~ $1s is monster name, %2$s is that monster target name,
                 //~ $3s is target armor name.
-                add_msg( _( "The %1$s hits %2$s but is stopped by its %3$s." ),
-                         name().c_str(),
-                         target.disp_name( true ).c_str(),
-                         target.skin_name().c_str() );
+                add_msg( _( "The %1$s hits %2$s but is stopped by its %3$s." ), name(),
+                         target.disp_name( true ), target.skin_name() );
             }
         } else if( target.is_player() ) {
             //~ 1$s is bodypart name in accusative, 2$s is armor name.
             add_msg( _( "Something hits your %1$s, but your %2$s protects you." ),
-                     body_part_name_accusative( bp_hit ).c_str(), target.skin_name().c_str() );
+                     body_part_name_accusative( bp_hit ), target.skin_name() );
         }
-    }
-
-    if( hitspread < 0 && !is_hallucination() ) {
-        target.on_dodge( this, get_melee() );
     }
 
     target.check_dead_state();
@@ -1349,7 +1360,7 @@ void monster::deal_projectile_attack( Creature *source, dealt_projectile_attack 
 }
 
 void monster::deal_damage_handle_type( const damage_unit &du, body_part bp, int &damage,
-                                       int &pain )
+                                       int &pain, bool simulated )
 {
     switch( du.type ) {
         case DT_ELECTRIC:
@@ -1385,7 +1396,7 @@ void monster::deal_damage_handle_type( const damage_unit &du, body_part bp, int 
             break;
     }
 
-    Creature::deal_damage_handle_type( du, bp, damage, pain );
+    Creature::deal_damage_handle_type( du, bp, damage, pain, simulated );
 }
 
 int monster::heal( const int delta_hp, bool overheal )

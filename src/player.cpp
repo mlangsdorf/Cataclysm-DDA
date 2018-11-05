@@ -3160,6 +3160,85 @@ int player::intimidation() const
     return ret;
 }
 
+int player::turns_to_kill( Creature &target ) {
+    int htk = hits_to_kill( target );
+    int move_cost = attack_speed( used_weapon() );
+    return static_cast<int>( htk * move_cost / get_speed() );
+}
+
+damage_instance player::average_damage( bool melee ) const
+{
+    damage_instance damage;
+    const item &weapon = used_weapon();
+    if( melee ) {
+        roll_all_damage( false, damage, true, weapon );
+        // simplified handling of mutations
+        const int unarmed = get_skill_level( skill_unarmed );
+        for( const auto &pr : my_mutations ) {
+            const auto &branch = pr.first.obj();
+            for( const auto &mut_atk : branch.attacks_granted ) {
+                damage_instance mut_dam;
+                if( mut_atk.hardcoded_effect ) {
+                    mut_dam = damage_instance::physical( 0, 0, 5 );
+                } else {
+                    mut_dam = mut_atk.base_damage;
+                    damage_instance scaled = mut_atk.strength_damage;
+                    scaled.mult_damage( std::min<float>( 15.0f, get_str() ), true );
+                    mut_dam.add( scaled );
+                }
+                const int proc_value = get_dex() + unarmed;
+                mut_dam.mult_damage( proc_value * 1.0 / mut_atk.chance );
+                damage.add( mut_dam );
+            }
+        }
+    } else if( weapon.type->gun ) {
+        damage = weapon.gun_damage();
+        const itype_id ammo_type = weapon.ammo_default( true );
+        const itype *def_ammo_i = ammo_type != "NULL" ?  item::find_type( ammo_type ) : nullptr;
+        if( def_ammo_i != nullptr && def_ammo_i->ammo ) {
+            const islot_ammo &def_ammo = *def_ammo_i->ammo;
+            damage.add( def_ammo.damage );
+        }
+    } else {
+        damage = damage_instance();
+    }
+    return damage;
+}
+
+void player::average_absorb_hit( body_part bp, damage_instance &dam )
+{
+    for( auto &elem : dam.damage_units ) {
+        float absorbed = 0;
+        float start_damage = elem.amount;
+        // we don't care about order
+        for( item &armor : worn ) {
+            if( !armor.covers( bp ) ) {
+                continue;
+            }
+            float damage_left = elem.amount;
+            armor.mitigate_damage( elem );
+            // how damage do we expect this armor to absorb on average
+            absorbed += ( damage_left - elem.amount ) * armor.get_coverage() / 100.0;
+            elem.amount = start_damage - absorbed;
+            if( elem.amount <= 0 ) {
+                break;
+            }
+        }
+        if( elem.amount <= 0 ) {
+            continue;
+        }
+        passive_absorb_hit( bp, elem );
+        if( elem.type == DT_BASH ) {
+            if( has_trait( trait_LIGHT_BONES ) ) {
+                elem.amount *= 1.4;
+            }
+            if( has_trait( trait_HOLLOW_BONES ) ) {
+                elem.amount *= 1.8;
+            }
+        }
+    }
+}
+
 bool player::is_dead_state() const
 {
     return hp_cur[hp_head] <= 0 || hp_cur[hp_torso] <= 0;
