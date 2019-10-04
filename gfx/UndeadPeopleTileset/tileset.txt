@@ -1,0 +1,14 @@
+#UndeadDead People Tileset
+#The revived version of SomeDeadGuy's Tileset for Main DDA Repo
+
+#Name of the tileset
+NAME: UndeadPeople
+
+#Viewing (Option) name of the tileset
+VIEW: UndeadPeople
+
+#JSON Path - Default of tile_config.json
+JSON: tile_config.json
+
+#Tileset Path - Default of tinytile.png
+TILESET: tiles.png

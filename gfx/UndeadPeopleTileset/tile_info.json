@@ -1,0 +1,37 @@
+[
+  {
+    "width": 32,
+    "pixelscale": 1,
+    "height": 32
+  },
+  {
+    "normal.png": {}
+  },
+  {
+    "oddsize.png": {
+      "sprite_offset_x": -16,
+      "sprite_offset_y": -16,
+      "sprite_height": 48,
+      "sprite_width": 64
+    }
+  },
+  { 
+    "large.png": { 
+      "sprite_offset_x": -16,
+      "sprite_offset_y": -48,
+      "sprite_height": 80,
+      "sprite_width": 64
+    }
+  },
+  { 
+    "huge.png": {
+      "sprite_offset_x": -48,
+      "sprite_offset_y": -48,
+      "sprite_height": 128,
+      "sprite_width": 160
+    }
+  },
+  { 
+    "fallback_DPE.png": { "fallback": true }
+  }
+]
