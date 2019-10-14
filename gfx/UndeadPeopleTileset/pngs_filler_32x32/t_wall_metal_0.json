@@ -1,0 +1,27 @@
+{
+  "bg": [ ],
+  "additional_tiles": [
+    { "bg": [  ], "id": "center", "fg": [ "t_wall_metal_0" ] },
+    {
+      "bg": [  ],
+      "id": "corner",
+      "fg": [ "t_wall_metal_1", "t_wall_metal_2", "t_wall_metal_3", "t_wall_metal_4" ]
+    },
+    {
+      "bg": [  ],
+      "id": "t_connection",
+      "fg": [ "t_wall_metal_5", "t_wall_metal_6", "t_wall_metal_7", "t_wall_metal_8" ]
+    },
+    { "bg": [  ], "id": "edge", "fg": [ "t_wall_metal_9", "t_wall_metal_10" ] },
+    {
+      "bg": [  ],
+      "id": "end_piece",
+      "fg": [ "t_wall_metal_11", "t_wall_metal_12", "t_wall_metal_13", "t_wall_metal_14" ]
+    },
+    { "bg": [  ], "id": "unconnected", "fg": [ "t_wall_metal_15" ] }
+  ],
+  "fg": [ "t_wall_metal_0" ],
+  "multitile": true,
+  "rotates": false,
+  "id": [ "t_wall_metal", "t_secretdoor_metal_c" ]
+}

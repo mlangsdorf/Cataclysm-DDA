@@ -15,6 +15,11 @@
       "sprite_width": 64
     }
   },
+  {
+    "filler.png": {
+      "filler": true
+    }
+  },
   { 
     "large.png": { 
       "sprite_offset_x": -16,

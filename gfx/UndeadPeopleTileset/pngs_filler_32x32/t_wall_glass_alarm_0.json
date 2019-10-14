@@ -1,0 +1,17 @@
+{
+  "bg": [ "987_t_door_frame_0" ],
+  "additional_tiles": [
+    { "bg": [ "987_t_door_frame_0" ], "id": "center", "fg": [ "t_wall_glass_alarm_0" ] },
+    { "bg": [ "987_t_door_frame_0" ], "id": "corner", "fg": [ "t_wall_glass_alarm_2" ] },
+    { "bg": [ "987_t_door_frame_0" ], "id": "edge", "fg": [ "t_wall_glass_alarm_3" ] },
+    { "bg": [ "987_t_door_frame_0" ], "id": "end_piece", "fg": [ "t_wall_glass_alarm_4" ] },
+    { "bg": [ "987_t_door_frame_0" ], "id": "t_connection", "fg": [ "t_wall_glass_alarm_5" ] },
+    { "bg": [ "987_t_door_frame_0" ], "id": "unconnected", "fg": [ "3340_t_wall_glass_6" ] }
+  ],
+  "fg": [
+    "t_wall_glass_alarm_0"
+  ],
+  "multitile": true,
+  "rotates": false,
+  "id": "t_wall_glass"
+}

@@ -1,0 +1,27 @@
+{
+  "bg": [ ],
+  "additional_tiles": [
+    { "bg": [  ], "id": "center", "fg": [ "t_scrap_wall_0" ] },
+    {
+      "bg": [  ],
+      "id": "corner",
+      "fg": [ "t_scrap_wall_1", "t_scrap_wall_2", "t_scrap_wall_3", "t_scrap_wall_4" ]
+    },
+    {
+      "bg": [  ],
+      "id": "t_connection",
+      "fg": [ "t_scrap_wall_5", "t_scrap_wall_6", "t_scrap_wall_7", "t_scrap_wall_8" ]
+    },
+    { "bg": [  ], "id": "edge", "fg": [ "t_scrap_wall_9", "t_scrap_wall_10" ] },
+    {
+      "bg": [  ],
+      "id": "end_piece",
+      "fg": [ "t_scrap_wall_11", "t_scrap_wall_12", "t_scrap_wall_13", "t_scrap_wall_14" ]
+    },
+    { "bg": [  ], "id": "unconnected", "fg": [ "t_scrap_wall_15" ] }
+  ],
+  "fg": [ "t_scrap_wall_0" ],
+  "multitile": true,
+  "rotates": false,
+  "id": "t_scrap_wall"
+}
