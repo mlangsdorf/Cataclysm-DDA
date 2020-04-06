@@ -238,8 +238,6 @@ void map::add_vehicle_to_cache( vehicle *veh )
         return;
     }
 
-    auto &ch = get_cache( veh->sm_pos.z );
-    ch.veh_in_active_range = true;
     // Get parts
     std::vector<vehicle_part> &parts = veh->parts;
     int partid = 0;
@@ -249,45 +247,36 @@ void map::add_vehicle_to_cache( vehicle *veh )
             continue;
         }
         const tripoint p = veh->global_part_pos3( *it );
-        ch.veh_cached_parts.insert( std::make_pair( p,
-                                    std::make_pair( veh, partid ) ) );
+        level_cache &ch = get_cache( p.z );
+        ch.veh_in_active_range = true;
+        ch.veh_cached_parts[p] = std::make_pair( veh, partid );
         if( inbounds( p ) ) {
             ch.veh_exists_at[p.x][p.y] = true;
         }
     }
 }
 
-void map::update_vehicle_cache( vehicle *veh, const int old_zlevel )
+void map::clear_vehicle_point_from_cache( vehicle *veh, const tripoint &pt )
 {
     if( veh == nullptr ) {
         debugmsg( "Tried to add null vehicle to cache" );
         return;
     }
 
-    // Existing must be cleared
-    auto &ch = get_cache( old_zlevel );
-    auto it = ch.veh_cached_parts.begin();
-    const auto end = ch.veh_cached_parts.end();
-    while( it != end ) {
-        if( it->second.first == veh ) {
-            const tripoint p = it->first;
-            if( inbounds( p ) ) {
-                ch.veh_exists_at[p.x][p.y] = false;
-            }
-            ch.veh_cached_parts.erase( it++ );
-            // If something was resting on vehicle, drop it
-            support_dirty( tripoint( p.xy(), old_zlevel + 1 ) );
-        } else {
-            ++it;
-        }
+    level_cache &ch = get_cache( pt.z );
+    if( inbounds( pt ) ) {
+        ch.veh_exists_at[pt.x][pt.y] = false;
+    }
+    auto it = ch.veh_cached_parts.find( pt );
+    if( it != ch.veh_cached_parts.end() && it->second.first == veh ) {
+        ch.veh_cached_parts.erase( it );
     }
 
-    add_vehicle_to_cache( veh );
 }
 
 void map::clear_vehicle_cache( const int zlev )
 {
-    auto &ch = get_cache( zlev );
+    level_cache &ch = get_cache( zlev );
     while( !ch.veh_cached_parts.empty() ) {
         const auto part = ch.veh_cached_parts.begin();
         const auto &p = part->first;
@@ -296,6 +285,7 @@ void map::clear_vehicle_cache( const int zlev )
         }
         ch.veh_cached_parts.erase( part );
     }
+    ch.veh_in_active_range = false;
 }
 
 void map::clear_vehicle_list( const int zlev )
@@ -308,7 +298,7 @@ void map::clear_vehicle_list( const int zlev )
 void map::update_vehicle_list( const submap *const to, const int zlev )
 {
     // Update vehicle data
-    auto &ch = get_cache( zlev );
+    level_cache &ch = get_cache( zlev );
     for( const auto &elem : to->vehicles ) {
         ch.vehicle_list.insert( elem.get() );
         if( !elem->loot_zones.empty() ) {
@@ -341,7 +331,7 @@ std::unique_ptr<vehicle> map::detach_vehicle( vehicle *veh )
     }
     veh->invalidate_towing( true );
     submap *const current_submap = get_submap_at_grid( veh->sm_pos );
-    auto &ch = get_cache( z );
+    level_cache &ch = get_cache( z );
     for( size_t i = 0; i < current_submap->vehicles.size(); i++ ) {
         if( current_submap->vehicles[i].get() == veh ) {
             ch.vehicle_list.erase( veh );
@@ -451,6 +441,25 @@ bool map::vehproceed( VehicleList &vehicle_list )
     cur_veh->v = cur_veh->v->act_on_map();
     if( cur_veh->v == nullptr ) {
         vehicle_list = get_vehicles();
+    }
+
+    // confirm that veh_in_active_range is still correct for each z-level
+    int minz = zlevels ? -OVERMAP_DEPTH : abs_sub.z;
+    int maxz = zlevels ? OVERMAP_HEIGHT : abs_sub.z;
+    for( int zlev = minz; zlev <= maxz; ++zlev ) {
+        level_cache &cache = get_cache( zlev );
+        bool still_active = false;
+        if( cache.veh_in_active_range ) {
+            for( int vehx = 0; vehx < MAPSIZE_X; vehx++ ) {
+                for( int vehy = 0; vehy < MAPSIZE_Y; vehy++ ) {
+                    if( cache.veh_exists_at[vehx][vehy] ) {
+                        still_active = true;
+                        break;
+                    }
+                }
+            }
+        }
+        cache.veh_in_active_range = still_active;
     }
     return true;
 }
@@ -954,7 +963,7 @@ optional_vpart_position map::veh_at( const tripoint &p ) const
 const vehicle *map::veh_at_internal( const tripoint &p, int &part_num ) const
 {
     // This function is called A LOT. Move as much out of here as possible.
-    const auto &ch = get_cache_ref( p.z );
+    const level_cache &ch = get_cache( p.z );
     if( !ch.veh_in_active_range || !ch.veh_exists_at[p.x][p.y] ) {
         part_num = -1;
         return nullptr; // Clear cache indicates no vehicle. This should optimize a great deal.
@@ -1048,10 +1057,16 @@ void map::unboard_vehicle( const tripoint &p, bool dead_passenger )
 
 bool map::displace_vehicle( vehicle &veh, const tripoint &dp )
 {
-    const tripoint p = veh.global_pos3();
-    const tripoint p2 = p + dp;
-    const tripoint src = p;
-    const tripoint dst = p2;
+    const tripoint src = veh.global_pos3();
+    // handle vehicle ramps
+    int ramp_offset = 0;
+    if( has_flag( "RAMP_UP", src + dp ) ) {
+        ramp_offset += 1;
+    } else if( has_flag( "RAMP_DOWN", src + dp ) ) {
+        ramp_offset -= 1;
+    }
+
+    const tripoint dst = src + dp + tripoint( 0, 0, ramp_offset );
 
     if( !inbounds( src ) ) {
         add_msg( m_debug, "map::displace_vehicle: coordinates out of bounds %d,%d,%d->%d,%d,%d",
@@ -1063,6 +1078,7 @@ bool map::displace_vehicle( vehicle &veh, const tripoint &dp )
     point dst_offset;
     submap *src_submap = get_submap_at( src, src_offset );
     submap *const dst_submap = get_submap_at( dst, dst_offset );
+    std::set<int> smzs;
 
     // first, let's find our position in current vehicles vector
     size_t our_i = 0;
@@ -1088,7 +1104,7 @@ bool map::displace_vehicle( vehicle &veh, const tripoint &dp )
 
     // move the vehicle
     // don't let it go off grid
-    if( !inbounds( p2 ) ) {
+    if( !inbounds( dst ) ) {
         veh.stop();
         // Silent debug
         dbg( D_ERROR ) << "map:displace_vehicle: Stopping vehicle, displaced dp=("
@@ -1130,11 +1146,18 @@ bool map::displace_vehicle( vehicle &veh, const tripoint &dp )
                          "passenger at %d,%d,%d", prt, part_pos.x, part_pos.y, part_pos.z,
                          psg->posx(), psg->posy(), psg->posz() );
             }
+            const vehicle_part &veh_part = veh.parts[prt];
+
+            // ramps make everything super tricky
+            int psg_offset_z = -ramp_offset;
+            if( has_flag( "RAMP_UP", src + dp + veh_part.precalc[1] ) ) {
+                psg_offset_z += 1;
+            } else if( has_flag( "RAMP_DOWN", src + dp + veh_part.precalc[1] ) ) {
+                psg_offset_z -= 1;
+            }
 
             // Place passenger on the new part location
-            const vehicle_part &veh_part = veh.parts[prt];
-            tripoint psgp( dp + part_pos.xy() - veh_part.precalc[0] + veh_part.precalc[1] + tripoint( 0, 0,
-                           psg->posz() ) );
+            tripoint psgp( dst + veh_part.precalc[1] + tripoint( 0, 0, psg_offset_z ) );
             // someone is in the way so try again
             if( g->critter_at( psgp ) ) {
                 complete = false;
@@ -1143,47 +1166,83 @@ bool map::displace_vehicle( vehicle &veh, const tripoint &dp )
             if( psg == &g->u ) {
                 // If passenger is you, we need to update the map
                 need_update = true;
-                z_change = dp.z;
+                z_change = psgp.z - part_pos.z;
             }
+
             psg->setpos( psgp );
             r.moved = true;
         }
     }
 
     veh.shed_loose_parts();
+
+    // when a vehicle part enters the low end of a down ramp, or the high end of an up ramp,
+    // it immediately translates down or up a z-level, respectively, ending up on the low
+    // end of an up ramp or high end of a down ramp, respectively.  The two ends are set
+    // past each other, like so:
+    // (side view)  z+1   Rdh RDl
+    //              z+0   RUh Rul
+    // A vehicle moving left to right on z+1 drives down to z+0 by entering the ramp down low end.
+    // A vehicle moving right to left on z+0 drives up to z+1 by entering the ramp up high end.
+    // A vehicle moving left to right on z+0 should ideally collide into a wall before entering
+    //   the ramp up high end, but even if it does, it briefly transitions to z+1 before returning
+    //   to z0 by entering the ramp down low end.
+    // A vehicle moving right to left on z+1 drives down to z+0 by entering the ramp down low end,
+    //   then immediately returns to z+1 by entering the ramp up high end.
+    // When a vehicle's pivot point transitions a z-level via a ramp, all other pre-calc points
+    // make the opposite transition, so that points that were above an ascending pivot point are
+    // now level with it, and parts that were level with an ascending pivot point are now below
+    // it.
+    // parts that enter the translation portion of a ramp on the same displacement as the
+    // pivot point stay at the same relative z to the pivot point, as the ramp_offset adjustments
+    // cancel out.
     for( auto &prt : veh.parts ) {
+        clear_vehicle_point_from_cache( &veh, src + prt.precalc[0] );
         prt.precalc[0] = prt.precalc[1];
+        if( has_flag( "RAMP_UP", src + dp + prt.precalc[0] ) ) {
+            prt.precalc[0].z += 1;
+        } else if( has_flag( "RAMP_DOWN", src + dp + prt.precalc[0] ) ) {
+            prt.precalc[0].z -= 1;
+        }
+        prt.precalc[0].z -= ramp_offset;
+        prt.precalc[1].z = prt.precalc[0].z;
+        smzs.insert( prt.precalc[0].z );
     }
     veh.pivot_anchor[0] = veh.pivot_anchor[1];
     veh.pivot_rotation[0] = veh.pivot_rotation[1];
 
     veh.pos = dst_offset;
-    veh.sm_pos.z = p2.z;
     // Invalidate vehicle's point cache
     veh.occupied_cache_time = calendar::before_time_starts;
     if( src_submap != dst_submap ) {
-        veh.set_submap_moved( point( p2.x / SEEX, p2.y / SEEY ) );
+        veh.set_submap_moved( tripoint( dst.x / SEEX, dst.y / SEEY, dst.z ) );
         auto src_submap_veh_it = src_submap->vehicles.begin() + our_i;
         dst_submap->vehicles.push_back( std::move( *src_submap_veh_it ) );
         src_submap->vehicles.erase( src_submap_veh_it );
         dst_submap->is_uniform = false;
     }
-    update_vehicle_cache( &veh, src.z );
+    add_vehicle_to_cache( &veh );
     if( need_update ) {
         g->update_map( g->u );
     }
 
-    if( z_change != 0 ) {
-        g->vertical_move( z_change, true );
+    if( z_change || src.z != dst.z ) {
+        if( z_change ) {
+            g->vertical_move( z_change, true );
+        }
         // I don't know why all this is needed, but the cache does not update properly without.
         update_vehicle_list( dst_submap, dst.z );
-        update_vehicle_cache( &veh, src.z );
-        level_cache &ch2 = get_cache( src.z );
-        for( const vehicle *elem : ch2.vehicle_list ) {
-            if( elem == &veh ) {
-                ch2.vehicle_list.erase( &veh );
-                ch2.zone_vehicles.erase( &veh );
-                break;
+        //add_vehicle_to_cache( &veh );
+        // delete the vehicle from the source z-level vehicle cache set if it is no longer on
+        // that z-level
+        if( src.z != dst.z ) {
+            level_cache &ch2 = get_cache( src.z );
+            for( const vehicle *elem : ch2.vehicle_list ) {
+                if( elem == &veh ) {
+                    ch2.vehicle_list.erase( &veh );
+                    ch2.zone_vehicles.erase( &veh );
+                    break;
+                }
             }
         }
         veh.check_is_heli_landed();
@@ -1195,11 +1254,13 @@ bool map::displace_vehicle( vehicle &veh, const tripoint &dp )
     }
 
     veh.check_falling_or_floating();
-
+    //
     //global positions of vehicle loot zones have changed.
     veh.zones_dirty = true;
 
-    on_vehicle_moved( veh.sm_pos.z );
+    for( int vsmz : smzs ) {
+        on_vehicle_moved( vsmz );
+    }
     return true;
 }
 
@@ -7724,41 +7785,44 @@ void map::build_floor_caches()
     }
 }
 
+static void vehicle_caching_internal( level_cache &zch, const vpart_reference &vp, vehicle *v )
+{
+    auto &outside_cache = zch.outside_cache;
+    auto &transparency_cache = zch.transparency_cache;
+    auto &floor_cache = zch.floor_cache;
+
+    const size_t part = vp.part_index();
+    const tripoint &part_pos =  v->global_part_pos3( vp.part() );
+
+    bool vehicle_is_opaque = vp.has_feature( VPFLAG_OPAQUE ) && !vp.part().is_broken();
+
+    if( vehicle_is_opaque ) {
+        int dpart = v->part_with_feature( part, VPFLAG_OPENABLE, true );
+        if( dpart < 0 || !v->parts[dpart].open ) {
+            transparency_cache[part_pos.x][part_pos.y] = LIGHT_TRANSPARENCY_SOLID;
+        } else {
+            vehicle_is_opaque = false;
+        }
+    }
+
+    if( vehicle_is_opaque || vp.is_inside() ) {
+        outside_cache[part_pos.x][part_pos.y] = false;
+    }
+
+    if( vp.has_feature( VPFLAG_BOARDABLE ) && !vp.part().is_broken() ) {
+        floor_cache[part_pos.x][part_pos.y] = true;
+    }
+}
 void map::do_vehicle_caching( int z )
 {
-    auto &ch = get_cache( z );
-    auto &outside_cache = ch.outside_cache;
-    auto &transparency_cache = ch.transparency_cache;
-    auto &floor_cache = ch.floor_cache;
+    level_cache &ch = get_cache( z );
     for( vehicle *v : ch.vehicle_list ) {
         for( const vpart_reference &vp : v->get_all_parts() ) {
-            const size_t part = vp.part_index();
-            int px = v->global_pos3().x + vp.part().precalc[0].x;
-            int py = v->global_pos3().y + vp.part().precalc[0].y;
-            const point p( px, py );
-            if( !inbounds( p ) ) {
+            const tripoint &part_pos = v->global_part_pos3( vp.part() );
+            if( !inbounds( part_pos.xy() ) ) {
                 continue;
             }
-
-            bool vehicle_is_opaque =
-                vp.has_feature( VPFLAG_OPAQUE ) && !vp.part().is_broken();
-
-            if( vehicle_is_opaque ) {
-                int dpart = v->part_with_feature( part, VPFLAG_OPENABLE, true );
-                if( dpart < 0 || !v->parts[dpart].open ) {
-                    transparency_cache[px][py] = LIGHT_TRANSPARENCY_SOLID;
-                } else {
-                    vehicle_is_opaque = false;
-                }
-            }
-
-            if( vehicle_is_opaque || vp.is_inside() ) {
-                outside_cache[px][py] = false;
-            }
-
-            if( vp.has_feature( VPFLAG_BOARDABLE ) && !vp.part().is_broken() ) {
-                floor_cache[px][py] = true;
-            }
+            vehicle_caching_internal( get_cache( part_pos.z ), vp, v );
         }
     }
 }

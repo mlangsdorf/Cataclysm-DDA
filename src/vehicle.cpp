@@ -1026,7 +1026,7 @@ void vehicle::smash( map &m, float hp_percent_loss_min, float hp_percent_loss_ma
         if( roll < pct_af ) {
             double dist =  damage_size == 0.0f ? 1.0f :
                            clamp( 1.0f - trig_dist( damage_origin, part.precalc[0].xy() ) /
-                                  damage_size, 0.0, 1.0 );
+                                  damage_size, 0.0f, 1.0f );
             //Everywhere else, drop by 10-120% of max HP (anything over 100 = broken)
             if( mod_hp( part, 0 - ( rng_float( hp_percent_loss_min * dist,
                                                hp_percent_loss_max * dist ) *
@@ -1999,6 +1999,8 @@ void vehicle::part_removal_cleanup()
             while( !items.empty() ) {
                 items.erase( items.begin() );
             }
+            const tripoint &pt = global_part_pos3( *it );
+            g->m.clear_vehicle_point_from_cache( this, pt );
             it = parts.erase( it );
             changed = true;
         } else {
@@ -2012,7 +2014,7 @@ void vehicle::part_removal_cleanup()
             g->m.destroy_vehicle( this );
             return;
         } else {
-            g->m.update_vehicle_cache( this, sm_pos.z );
+            g->m.add_vehicle_to_cache( this );
         }
     }
     shift_if_needed();
@@ -3155,11 +3157,10 @@ tripoint vehicle::global_part_pos3( const vehicle_part &pt ) const
     return global_pos3() + pt.precalc[ 0 ];
 }
 
-void vehicle::set_submap_moved( const point &p )
+void vehicle::set_submap_moved( const tripoint &p )
 {
     const point old_msp = g->m.getabs( global_pos3().xy() );
-    sm_pos.x = p.x;
-    sm_pos.y = p.y;
+    sm_pos = p;
     if( !tracking_on ) {
         return;
     }
