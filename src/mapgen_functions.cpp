@@ -103,7 +103,6 @@ building_gen_pointer get_mapgen_cfunction( const std::string &ident )
             { "road_tee",         &mapgen_road },
             { "road_four_way",    &mapgen_road },
             { "field",            &mapgen_field },
-            { "bridge",           &mapgen_bridge },
             { "highway",          &mapgen_highway },
             { "railroad_straight", &mapgen_railroad },
             { "railroad_curved",   &mapgen_railroad },
@@ -1357,6 +1356,7 @@ void mapgen_sewer_four_way( mapgendata &dat )
 }
 
 ///////////////////
+#if 0 // preserving for reference
 void mapgen_bridge( mapgendata &dat )
 {
     map *const m = &dat.m;
@@ -1394,6 +1394,7 @@ void mapgen_bridge( mapgendata &dat )
     m->rotate( static_cast<int>( dat.terrain_type()->get_dir() ) );
     m->place_items( "road", 5, point_zero, point( SEEX * 2 - 1, SEEX * 2 - 1 ), false, dat.when() );
 }
+#endif
 
 void mapgen_highway( mapgendata &dat )
 {
