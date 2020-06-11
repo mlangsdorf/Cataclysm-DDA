@@ -2473,10 +2473,9 @@ bool basecamp::start_garage_chop( const point &dir, const tripoint_abs_omt &omt_
     }
     // FIXME: use ranges, do this sensibly
     //Chopping up the car!
-    //std::vector<vehicle_part> p_all = car->parts;
     int prt = 0;
     int skillLevel = comp->get_skill_level( skill_mechanics );
-    while( car->part_count() > 0 ) {
+    while( car->num_parts() > 0 ) {
         vehicle_stack contents = car->get_items( prt );
         for( auto iter = contents.begin(); iter != contents.end(); ) {
             comp->companion_mission_inv.add_item( *iter );

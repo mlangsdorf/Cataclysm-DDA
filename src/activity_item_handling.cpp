@@ -732,7 +732,7 @@ static bool vehicle_activity( player &p, const tripoint &src_loc, int vpindex, c
         return false;
     }
     int time_to_take = 0;
-    if( vpindex >= veh->part_count() ) {
+    if( !veh->valid_part( vpindex ) ) {
         // if parts got removed during our work, we can't just carry on removing, we want to repair parts!
         // so just bail out, as we don't know if the next shifted part is suitable for repair.
         if( type == 'r' ) {

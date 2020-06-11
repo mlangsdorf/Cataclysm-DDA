@@ -1381,6 +1381,7 @@ float npc::vehicle_danger( int radius ) const
             for( const vpart_reference &vpr : wrapped_veh.v->get_all_parts() ) {
                 last_part = vpr.part();
             }
+
             int size = std::max( last_part.mount.x, last_part.mount.y );
 
             double normal = std::sqrt( static_cast<float>( ( b.x - a.x ) * ( b.x - a.x ) + ( b.y - a.y ) *

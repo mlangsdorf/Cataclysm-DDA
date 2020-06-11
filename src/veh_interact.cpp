@@ -190,7 +190,6 @@ vehicle_part &veh_interact::select_part( const vehicle &veh, const part_selector
 
     if( opts == 1 ) {
         act( std::find_if( vpr.begin(), vpr.end(), sel_wrapper )->part() );
-
     } else if( opts != 0 ) {
         veh_interact vehint( const_cast<vehicle &>( veh ) );
         vehint.title = title.empty() ? _( "Select part" ) : title;

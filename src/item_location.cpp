@@ -695,7 +695,7 @@ void item_location::deserialize( JsonIn &js )
     } else if( type == "vehicle" ) {
         vehicle *const veh = veh_pointer_or_null( get_map().veh_at( pos ) );
         int part = obj.get_int( "part" );
-        if( veh && part >= 0 && part < veh->part_count() ) {
+        if( veh && veh->valid_part( part ) ) {
             ptr.reset( new impl::item_on_vehicle( vehicle_cursor( *veh, part ), idx ) );
         }
     } else if( type == "in_container" ) {
