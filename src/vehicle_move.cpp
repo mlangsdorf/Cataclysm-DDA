@@ -899,8 +899,8 @@ veh_collision vehicle::part_collision( int part, const tripoint &p,
     // Calculate mass AFTER checking for collision
     //  because it involves iterating over all cargo
     // Rotors only use rotor mass in calculation.
-    const float mass = ( part_info( part ).rotor_diameter() > 0 ) ?
-                       to_kilogram( parts[ part ].base.weight() ) : to_kilogram( total_mass() );
+    const float mass = ( part_info( ret.part ).rotor_diameter() > 0 ) ?
+                       to_kilogram( parts[ ret.part ].base.weight() ) : to_kilogram( total_mass() );
 
     //Calculate damage resulting from d_E
     const itype *type = item::find_type( part_info( ret.part ).item );
