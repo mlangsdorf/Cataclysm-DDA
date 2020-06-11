@@ -238,7 +238,13 @@ void map::add_vehicle_to_cache( vehicle *veh )
     }
 
     // Get parts
-    for( const vpart_reference &vpr : veh->get_all_parts() ) {
+    std::vector<vpart_reference> all_parts;
+
+    for( const auto &tmp : veh->get_all_parts_incl_fake() ) {
+        all_parts.push_back( tmp );
+    }
+
+    for( const vpart_reference &vpr : all_parts ) {
         if( vpr.part().removed ) {
             continue;
         }
@@ -547,19 +553,24 @@ vehicle *map::move_vehicle( vehicle &veh, const tripoint &dp, const tileray &fac
             if( coll.type == veh_coll_veh ) {
                 continue;
             }
-            if( coll.part > veh.part_count() ||
+            if( !veh.valid_part( coll.part, true ) ||
                 veh.part( coll.part ).removed ) {
                 continue;
+            }
+            int part_num = coll.part;
+            if( veh.fake_part( part_num ) ) {
+                part_num = veh.get_fake_parent( part_num );
             }
 
             const point &collision_point = veh.part( coll.part ).mount;
             const int coll_dmg = coll.imp;
+
             // Shock damage, if the target part is a rotor treat as an aimed hit.
-            if( veh.part_info( coll.part ).rotor_diameter() > 0 ) {
-                veh.damage( coll.part, coll_dmg, DT_BASH, true );
+            if( veh.part_info( part_num ).rotor_diameter() > 0 ) {
+                veh.damage( part_num, coll_dmg, DT_BASH, true );
             } else {
                 impulse += coll_dmg;
-                veh.damage( coll.part, coll_dmg, DT_BASH );
+                veh.damage( part_num, coll_dmg, DT_BASH );
                 veh.damage_all( coll_dmg / 2, coll_dmg, DT_BASH, collision_point );
             }
         }
@@ -826,14 +837,22 @@ float map::vehicle_vehicle_collision( vehicle &veh, vehicle &veh2,
         if( &veh2 != static_cast<vehicle *>( veh_veh_coll.target ) ) {
             continue;
         }
-
-        int parm1 = veh.part_with_feature( veh_veh_coll.part, VPFLAG_ARMOR, true );
-        if( parm1 < 0 ) {
-            parm1 = veh_veh_coll.part;
+        int part1 = veh_veh_coll.part;
+        if( veh.fake_part( part1 ) ) {
+            part1 = veh.get_fake_parent( part1 );
         }
-        int parm2 = veh2.part_with_feature( veh_veh_coll.target_part, VPFLAG_ARMOR, true );
+        int part2 = veh_veh_coll.target_part;
+        if( veh2.fake_part( part2 ) ) {
+            part2 = veh2.get_fake_parent( part2 );
+        }
+
+        int parm1 = veh.part_with_feature( part1, VPFLAG_ARMOR, true );
+        if( parm1 < 0 ) {
+            parm1 = part1;
+        }
+        int parm2 = veh2.part_with_feature( part2, VPFLAG_ARMOR, true );
         if( parm2 < 0 ) {
-            parm2 = veh_veh_coll.target_part;
+            parm2 = part2;
         }
 
         epicenter1 += veh.part( parm1 ).mount;
@@ -1189,6 +1208,8 @@ bool map::displace_vehicle( vehicle &veh, const tripoint &dp, const bool adjust_
 
     veh.shed_loose_parts();
     smzs = veh.advance_precalc_mounts( dst_offset, src, dp, ramp_offset, adjust_pos, parts_to_move );
+    veh.update_active_fakes();
+
     if( src_submap != dst_submap ) {
         veh.set_submap_moved( tripoint( dst.x / SEEX, dst.y / SEEY, dst.z ) );
         auto src_submap_veh_it = src_submap->vehicles.begin() + our_i;
@@ -5378,7 +5399,7 @@ void map::add_splatter( const field_type_id &type, const tripoint &where, int in
         if( const optional_vpart_position vp = veh_at( where ) ) {
             vehicle *const veh = &vp->vehicle();
             // Might be -1 if all the vehicle's parts at where are marked for removal
-            const int part = veh->part_displayed_at( vp->mount() );
+            const int part = veh->part_displayed_at( vp->mount(), true );
             if( part != -1 ) {
                 veh->part( part ).blood += 200 * std::min( intensity, 3 ) / 3;
                 return;
@@ -6746,7 +6767,7 @@ void map::loadn( const tripoint &grid, const bool update_vehicles )
     auto &veh_vec = tmpsub->vehicles;
     for( auto iter = veh_vec.begin(); iter != veh_vec.end(); ) {
         vehicle *veh = iter->get();
-        if( veh->part_count() > 0 ) {
+        if( veh->has_any_parts() ) {
             // Always fix submap coordinates for easier Z-level-related operations
             veh->sm_pos = grid;
             iter++;
@@ -7753,7 +7774,6 @@ static void vehicle_caching_internal( level_cache &zch, const vpart_reference &v
     const tripoint &part_pos =  v->global_part_pos3( vp.part() );
 
     bool vehicle_is_opaque = vp.has_feature( VPFLAG_OPAQUE ) && !vp.part().is_broken();
-
     if( vehicle_is_opaque ) {
         int dpart = v->part_with_feature( part, VPFLAG_OPENABLE, true );
         if( dpart < 0 || !v->part( dpart ).open ) {
