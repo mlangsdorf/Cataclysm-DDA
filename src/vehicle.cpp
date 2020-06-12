@@ -7227,6 +7227,8 @@ fake_vehicle_mount &vehicle::find_fake( const int part_num )
             return fm.second;
         }
     }
+    static fake_vehicle_mount null_fake = fake_vehicle_mount();
+    return null_fake;
 }
 
 int vehicle::get_fake_parent( const int part_num )
