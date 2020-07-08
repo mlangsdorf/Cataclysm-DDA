@@ -12,12 +12,12 @@
 #include "dialogue_win.h"
 #include "json.h"
 #include "npc.h"
-#include "player.h"
 #include "translations.h"
 #include "type_id.h"
 
 class martialart;
 class mission;
+class talker;
 struct dialogue;
 
 enum talk_trial_type : unsigned char {
@@ -88,7 +88,7 @@ struct talk_effect_fun_t {
     public:
         talk_effect_fun_t() = default;
         talk_effect_fun_t( const talkfunction_ptr & );
-        talk_effect_fun_t( const std::function<void( npc & )> & );
+        talk_effect_fun_t( const std::function<void( talker & )> & );
         talk_effect_fun_t( const std::function<void( const dialogue &d )> & );
         void set_companion_mission( const std::string &role_id );
         void set_add_effect( const JsonObject &jo, const std::string &member, bool is_npc = false );
@@ -219,15 +219,13 @@ struct talk_response {
 
 struct dialogue {
         /**
-         * The player character that speaks (always g->u).
-         * TODO: make it a reference, not a pointer.
+         * The talker that speaks (almost certainly get_avatar() )
          */
-        player *alpha = nullptr;
+        std::unique_ptr<talker> alpha;
         /**
-         * The NPC we talk to. Never null.
-         * TODO: make it a reference, not a pointer.
+         * The talker responded to alpha, usually a talker_npc.
          */
-        npc *beta = nullptr;
+        std::unique_ptr<talker> beta;
         /**
          * If true, we are done talking and the dialog ends.
          */

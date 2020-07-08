@@ -59,6 +59,7 @@ class bionic_collection;
 class faction;
 class player;
 class player_morale;
+class talker;
 class vehicle;
 struct bionic;
 struct construction;
@@ -2388,6 +2389,8 @@ class Character : public Creature, public visitable<Character>
 };
 
 Character &get_player_character();
+std::unique_ptr<talker> get_talker_for( Character &guy );
+std::unique_ptr<talker> get_talker_for( Character *guy );
 
 // Little size helper, exposed for use in deserialization code.
 creature_size calculate_size( const Character &c );

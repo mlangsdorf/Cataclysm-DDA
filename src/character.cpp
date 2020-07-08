@@ -73,6 +73,8 @@
 #include "string_formatter.h"
 #include "string_id.h"
 #include "submap.h"
+#include "talker.h"
+#include "talker_character.h"
 #include "text_snippets.h"
 #include "translations.h"
 #include "trap.h"
@@ -11042,4 +11044,13 @@ bool Character::defer_move( const tripoint &next )
     auto_move_route.insert( auto_move_route.begin(), next );
     next_expected_position = pos();
     return true;
+}
+
+std::unique_ptr<talker> get_talker_for( Character &guy )
+{
+    return std::make_unique<talker_character>( &guy );
+}
+std::unique_ptr<talker> get_talker_for( Character *guy )
+{
+    return std::make_unique<talker_character>( guy );
 }

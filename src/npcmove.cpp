@@ -13,6 +13,7 @@
 
 #include "active_item_cache.h"
 #include "activity_handlers.h"
+#include "avatar.h"
 #include "basecamp.h"
 #include "bionics.h"
 #include "bodypart.h"
@@ -60,6 +61,9 @@
 #include "rng.h"
 #include "sounds.h"
 #include "stomach.h"
+#include "talker.h"
+#include "talker_character.h"
+#include "talker_npc.h"
 #include "translations.h"
 #include "units.h"
 #include "value_ptr.h"
@@ -1235,7 +1239,7 @@ void npc::execute_action( npc_action action )
 
         break;
         case npc_talk_to_player:
-            talk_to_u();
+            g->u.talk_to( get_talker_for( this ) );
             moves = 0;
             break;
 

@@ -49,6 +49,7 @@ class mission;
 class monfaction;
 class monster;
 class npc_class;
+class talker;
 class vehicle;
 struct bionic_data;
 struct mission_type;
@@ -931,8 +932,6 @@ class npc : public player
         // How closely do we follow the player?
         int follow_distance() const;
 
-        // Dialogue and bartering--see npctalk.cpp
-        void talk_to_u( bool text_only = false, bool radio_contact = false );
         // Re-roll the inventory of a shopkeeper
         void shop_restock();
         // Use and assessment of items
@@ -1439,5 +1438,6 @@ std::ostream &operator<< ( std::ostream &os, const npc_need &need );
 
 /** Opens a menu and allows player to select a friendly NPC. */
 npc *pick_follower();
-
+std::unique_ptr<talker> get_talker_for( npc &guy );
+std::unique_ptr<talker> get_talker_for( npc *guy );
 #endif // CATA_SRC_NPC_H
