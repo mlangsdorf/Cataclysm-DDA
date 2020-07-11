@@ -1,3 +1,4 @@
+#if 0
 #include "character.h"
 #include "npc.h"
 #include "talker_npc.h"
@@ -80,6 +81,11 @@ mission *talker_npc::selected_mission() const override
     return me_npc->chatbin.mission_selected;
 }
 
+void select_mission( mission *selected ) override
+{
+    me_npc->chatbin.mission_selected = selected;
+}
+
 bool talker_npc::is_following() const override
 {
     return me_npc->is_following();
@@ -95,6 +101,11 @@ bool talker_npc::is_enemy() const override
     return me_npc->is_enemy();
 }
 
+bool talker_npc::is_player_ally()  const override
+{
+    return me_npc->is_player_ally();
+}
+
 std::vector<skill_id> skills_offered_to( const talker &student ) const override
 {
     if( student->get_character() ) {
@@ -102,6 +113,28 @@ std::vector<skill_id> skills_offered_to( const talker &student ) const override
     } else {
         return {};
     }
+}
+
+std::string npc_talker::skill_training_text( const talker &student,
+        const skill_id &skill ) const override
+{
+    Character *pupil = student.get_character();
+    if( !pupil ) {
+        return "";
+    }
+    const int cost = me_npc->is_ally( *pupil ) ? 0 : 1000 *
+                     ( 1 + pupil->get_skill_level( skill ) ) * ( 1 + pupil->get_skill_level( skill ) );
+    SkillLevel skill_level_obj = pupil.get_skill_level_object( skill );
+    const int cur_level = skill_level_obj.level();
+    const int cur_level_exercise = skill_level_obj.exercise();
+    skill_level_obj.train( 100 );
+    const int next_level = skill_level_obj.level();
+    const int next_level_exercise = skill_level_obj.exercise();
+
+    //~Skill name: current level (exercise) -> next level (exercise) (cost in dollars)
+    return string_format( cost > 0 ?  _( "%s: %d (%d%%) -> %d (%d%%) (cost $%d)" ) :
+                          _( "%s: %d (%d%%) -> %d (%d%%)" ), skill.obj().name(), cur_level,
+                          cur_level_exercise, next_level, next_level_exercise, cost / 100 );
 }
 
 std::vector<matype_id> styles_offered_to( const talker &student ) const override
@@ -113,12 +146,63 @@ std::vector<matype_id> styles_offered_to( const talker &student ) const override
     }
 }
 
-std::vector<spell_id> spells_offered_to( const talker &student ) const override
+std::string npc_talker::style_training_text( const talker &student,
+        const matype_id &style ) const override
+{
+    if( !student.get_character() ) {
+        return "";
+    } else if( me_npc->is_ally( *student.get_character() ) ) {
+        return style.obj().name;
+    } else {
+        return string_format( _( "%s ( cost $%d )" ), style.obj().name, 8 )
+    }
+}
+
+std::vector<spell_id> spells_offered_to( talker &student ) override
 {
     if( student->get_character() ) {
         return me_npc->spells_offered_to( *student->get_character() );
     } else {
         return {};
+    }
+}
+
+std::string npc_talker::spell_training_text( talker &student, const spell_id &sp ) override
+{
+    Character *pupil = student.get_character();
+    if( !pupil ) {
+        return "";
+    }
+    const spell &temp_spell = me_npc->magic.get_spell( sp );
+    const bool knows = pupil.magic.knows_spell( sp );
+    const int cost = me_npc->calc_spell_training_cost( knows, temp_spell.get_difficulty(),
+                     temp_spell.get_level() );
+    std::string text;
+    if( knows ) {
+        text = string_format( _( "%s: 1 hour lesson (cost %s)" ), temp_spell.name(),
+                              format_money( cost ) );
+    } else {
+        text = string_format( _( "%s: teaching spell knowledge (cost %s)" ),
+                              temp_spell.name(), format_money( cost ) );
+    }
+    return text;
+}
+
+void talker_npc::store_chosen_training( const skill_id &c_skill, const matype_id &c_style,
+                                        const spell_id &c_spell ) override
+{
+    if( c_skill ) {
+        beta->chatbin.skill = c_skill;
+        beta->chatbin.style = matype_id::NULL_ID();
+        beta->chatbin.dialogue_spell = spell_id();
+    } else if( c_style ) {
+        beta->chatbin.style = c_style;
+        beta->chatbin.skill = skill_id::NULL_ID();
+        beta->chatbin.dialogue_spell = spell_id();
+    } else if( c_spell != spell_id() ) {
+        beta->chatbin.style = matype_id::NULL_ID();
+        beta->chatbin.skill = skill_id::NULL_ID();
+        beta->chatbin.dialogue_spell = c_spell;
     }
 }
 
@@ -472,9 +556,9 @@ void talker_npc::give_item_to( const bool to_use ) override
     give_item_to( me, to_use );
 }
 
-void talker_npc::add_mission( const std::string &mission_id ) override
+void talker_npc::add_mission( const mission_type_id &mission_id ) override
 {
-    mission *miss = mission::reserve_new( mission_type_id( mission_id ), me_npc->getID() );
+    mission *miss = mission::reserve_new( mission_id, me_npc->getID() );
     miss->assign( get_avatar() );
     me_npc->chatbin.missions_assigned.push_back( miss );
 }
@@ -490,6 +574,11 @@ bool talker_npc::buy_from( const int amount ) override
     return npc_trading::pay_npc( me_npc, amount );
 }
 
+bool talker_npc::check_hostile_response( const int anger ) const override
+{
+    return me_npc->op_of_u.anger + anger > me_npc->hostile_anger_level();
+}
+
 void talker_npc::make_angry() override
 {
     me_npc->make_angry();
@@ -502,3 +591,4 @@ bool talker_npc::enslave_mind() override
     talk_function::follow( me );
     return not_following;
 }
+#endif

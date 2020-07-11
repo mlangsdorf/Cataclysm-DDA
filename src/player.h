@@ -490,10 +490,6 @@ class player : public Character
         int kcal_speed_penalty() const;
         /** Returns the penalty to speed from thirst */
         static int thirst_speed_penalty( int thirst );
-        /** This handles giving xp for a skill */
-        void practice( const skill_id &id, int amount, int cap = 99, bool suppress_warning = false );
-        /** This handles warning the player that there current activity will not give them xp */
-        void handle_skill_warning( const skill_id &id, bool force_warning = false );
 
         void on_worn_item_transform( const item &old_it, const item &new_it );
 

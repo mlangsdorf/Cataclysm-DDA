@@ -162,7 +162,6 @@ static const trait_id trait_NOMAD( "NOMAD" );
 static const trait_id trait_NOMAD2( "NOMAD2" );
 static const trait_id trait_NOMAD3( "NOMAD3" );
 static const trait_id trait_NOPAIN( "NOPAIN" );
-static const trait_id trait_PACIFIST( "PACIFIST" );
 static const trait_id trait_PAINRESIST( "PAINRESIST" );
 static const trait_id trait_PAINRESIST_TROGLO( "PAINRESIST_TROGLO" );
 static const trait_id trait_PARAIMMUNE( "PARAIMMUNE" );
@@ -172,7 +171,6 @@ static const trait_id trait_PROF_SKATER( "PROF_SKATER" );
 static const trait_id trait_PSYCHOPATH( "PSYCHOPATH" );
 static const trait_id trait_QUILLS( "QUILLS" );
 static const trait_id trait_SAPIOVORE( "SAPIOVORE" );
-static const trait_id trait_SAVANT( "SAVANT" );
 static const trait_id trait_SHELL2( "SHELL2" );
 static const trait_id trait_SLIMY( "SLIMY" );
 static const trait_id trait_SPINES( "SPINES" );
@@ -3702,7 +3700,8 @@ float player::fine_detail_vision_mod( const tripoint &p ) const
     return std::min( own_light, ambient_light );
 }
 
-void player::practice( const skill_id &id, int amount, int cap, bool suppress_warning )
+#if 0// FIXME
+void player::practice( const skill_id &id, int amount, int cap, bool suppress_warning ) override
 {
     SkillLevel &level = get_skill_level_object( id );
     const Skill &skill = id.obj();
@@ -3800,6 +3799,7 @@ void player::handle_skill_warning( const skill_id &id, bool force_warning )
                  skill_name, curLevel );
     }
 }
+#endif
 
 int player::exceeds_recipe_requirements( const recipe &rec ) const
 {

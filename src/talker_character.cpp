@@ -1,3 +1,4 @@
+#if 0
 #include "character.h"
 #include "talker_character.h"
 
@@ -165,6 +166,11 @@ bool talker_character::is_enemy() const override
     return me_chr->is_enemy();
 }
 
+bool talker_character::knows_spell( const spell_id &sp ) const override
+{
+    return me_chr->magic.knows_spell( sp );
+}
+
 bool talker_character::unarmed_attack() const override
 {
     return me_chr->unarmed_attack();
@@ -233,6 +239,11 @@ std::string talker_character::short_description() const override
 bool talker_character::is_deaf() const override
 {
     return me_chr->is_deaf();
+}
+
+std::string talker_character::get_grammatical_genders() const override
+{
+    return me_chr->get_grammatical_genders();
 }
 
 // override functions called in npctalk.cpp
@@ -332,14 +343,15 @@ void talker_character::buy_monster( talker &seller, const mtype_id &mtype, int c
             tmp.add_effect( effect_pacified, 1_turns, num_bp, true );
         }
 
-        if( !name_chr->empty() ) {
-            tmp.unique_name = name_chr->translated();
+        if( !name.empty() ) {
+            tmp.unique_name = name.translated();
         }
 
     }
 
-    if( name_chr->empty() ) {
-        popup( _( "%1$s gives you %2$d %3$s." ), seller_guy->name, count, mtype.obj().nname( count ) );
+    if( name.empty() ) {
+        popup( _( "%1$s gives you %2$d %3$s." ), seller_guy->name,
+               count, mtype.obj().nname( count ) );
     } else {
         popup( _( "%1$s gives you %2$s." ), seller_guy->name, name );
     }
@@ -350,3 +362,4 @@ void talker_character::learn_recipe( const &recipe r ) override
     me_chr->learn_recipe( r );
     popup( _( "You learn how to craft %s." ), r.result_name() );
 }
+#endif

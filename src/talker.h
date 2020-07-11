@@ -64,14 +64,17 @@ class talker
         virtual bool is_wearing( const itype_id & ) const {
             return false;
         }
-        virtual bool charges_of( const itype_id & ) const {
-            return false;
+        virtual int charges_of( const itype_id & ) const {
+            return 0;
         }
         virtual bool has_charges( const itype_id &, const int ) const {
             return false;
         }
         virtual bool has_amount( const itype_id &, const int ) const {
             return false;
+        }
+        virtual int value( const item & ) {
+            return 0;
         }
         virtual int num_bionics() const {
             return 0;
@@ -133,10 +136,15 @@ class talker
         virtual mission *selected_mission() const {
             return nullptr;
         }
+        virtual void select_mission( mission * ) {
+        }
         virtual bool is_following() const {
             return false;
         }
         virtual bool is_friendly( const Character & )  const {
+            return false;
+        }
+        virtual bool is_player_ally()  const {
             return false;
         }
         virtual bool is_enemy() const {
@@ -145,11 +153,26 @@ class talker
         virtual std::vector<skill_id> skills_offered_to( const talker & ) const {
             return {};
         }
+        virtual std::string skill_training_text( const talker &, const skill_id & ) const {
+            return {};
+        }
         virtual std::vector<matype_id> styles_offered_to( const talker & ) const {
             return {};
         }
-        virtual std::vector<spell_id> spells_offered_to( const talker & ) const {
+        virtual std::string style_training_text( const talker &, const matype_id & ) const {
             return {};
+        }
+        virtual std::vector<spell_id> spells_offered_to( talker & ) {
+            return {};
+        }
+        virtual std::string spell_training_text( talker &, const spell_id & ) const {
+            return {};
+        }
+        virtual bool knows_spell( const spell_id & ) const {
+            return {};
+        }
+        virtual void store_chosen_training( const skill_id &, const matype_id &,
+                                            const spell_id & ) {
         }
         virtual bool unarmed_attack() const {
             return false;
@@ -212,9 +235,15 @@ class talker
         virtual bool enslave_mind() {
             return false;
         }
+        virtual std::vector<std::string> get_grammatical_genders() const {
+            return {};
+        }
+        virtual bool check_hostile_response( const int ) const {
+            return false;
+        }
         // virtual setter functions called in npctalk.cpp
         virtual void say( const std::string & ) {}
-        virtual void shout( const std::string &, bool ) {}
+        virtual void shout( const std::string & = "", bool = false ) {}
         virtual void set_companion_mission( const std::string & ) {}
         virtual void check_missions() {}
         virtual void update_missions( const std::vector<mission *> &, const character_id & ) {}
@@ -226,9 +255,13 @@ class talker
         virtual void remove_value( const std::string & ) {}
         virtual void i_add( const item & ) {}
         virtual void add_debt( const int ) {}
-        virtual void use_charges( const itype_id &, const int ) {}
-        virtual void use_amount( const itype_id &, const int ) {}
-        virtual void remove_items_with( const item & ) {}
+        virtual std::list<item> use_charges( const itype_id &, const int ) {
+            return {};
+        }
+        virtual std::list<item> use_amount( const itype_id &, const int ) {
+            return {};
+        }
+        virtual void remove_items_with( const std::function<bool( const item & )> & ) {}
         virtual void sell_to( talker & ) {}
         virtual void set_fac( const faction_id & ) {}
         virtual void set_class( const npc_class_id & ) {}
@@ -236,8 +269,10 @@ class talker
         virtual void toggle_ai_rule( const std::string &, const std::string & ) {}
         virtual void set_ai_rule( const std::string &, const std::string & ) {}
         virtual void clear_ai_rule( const std::string &, const std::string & ) {}
-        virtual void give_item_to( const bool ) {}
-        virtual void add_mission( const std::string & ) {}
+        virtual std::string give_item_to( const bool ) {
+            return "";
+        }
+        virtual void add_mission( const mission_type_id & ) {}
         virtual void buy_monster( talker &, const mtype_id &, const int, const int, const bool,
                                   const translation & ) {}
         virtual void learn_recipe( const recipe & ) {}

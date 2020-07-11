@@ -14,6 +14,7 @@
 #include "character_id.h"
 #include "enums.h"
 #include "game_constants.h"
+#include "npc.h"
 #include "npc_favor.h"
 #include "omdata.h"
 #include "optional.h"
@@ -32,9 +33,9 @@ class JsonOut;
 class avatar;
 class item;
 class mission;
-class npc;
 class overmapbuffer;
 class player;
+class talker;
 template<typename T> struct enum_traits;
 
 enum npc_mission : int;

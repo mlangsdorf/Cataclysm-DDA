@@ -1,3 +1,4 @@
+#if 0
 #pragma once
 #ifndef CATA_SRC_TALKER_NPC_H
 #define CATA_SRC_TALKER_NPC_H
@@ -32,13 +33,19 @@ class talker_npc : public talker_character
         std::vector<mission *> available_missions() const override;
         std::vector<mission *> assigned_missions() const override;
         mission *selected_mission() const override;
+        void select_mission( mission *selected ) override;
         bool is_following() const override;
         bool is_friendly( const Character &guy ) const override;
         bool is_enemy() const override;
+        bool is_player_ally()  const override;
         std::vector<skill_id> skills_offered_to( const talker &student ) const override;
+        std::string skill_training_text( const talker &, const skill_id & ) const override;
         std::vector<matype_id> styles_offered_to( const talker &student ) const override;
-        std::vector<spell_id> spells_offered_to( const talker &student ) const override;
-
+        std::string style_training_text( const talker &, const matype_id & ) const override;
+        std::vector<spell_id> spells_offered_to( talker &student ) override;
+        std::string spell_training_text( talker &, const spell_id & ) const override;
+        void store_chosen_training( const skill_id &c_skill, const matype_id &c_style,
+                                    const spell_id &c_spell ) override;
         // override getter functions called in npctalk.cpp
         bool will_talk_to_u( const Character &u, const bool force ) override;
         std::vector<std::string> get_topics( const bool radio_contact ) override;
@@ -63,10 +70,12 @@ class talker_npc : public talker_character
         void set_ai_rule( const std::string &type, const std::string &rule ) override;
         void clear_ai_rule( const std::string &type, const std::string &rule ) override;
         void give_item_to( const bool to_use ) override;
-        void add_mission( const std::string &mission_id ) override;
+        void add_mission( const mission_type_id &mission_id ) override;
         void add_opinion( const int trust, const int fear, const int value, const int anger ) override;
         void make_angry() override;
+        bool check_hostile_response( const int anger ) const override;
     protected:
         npc *me_npc;
 };
+#endif
 #endif

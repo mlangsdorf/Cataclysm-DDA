@@ -1,3 +1,4 @@
+#if 0
 #pragma once
 #ifndef CATA_SRC_TALKER_CHARACTER_H
 #define CATA_SRC_TALKER_CHARACTER_H
@@ -53,8 +54,7 @@ class talker_character: public talker
         tripoint pos() const override;
         int cash() const override;
         int debt() const override;
-        bool has_ai_rule( const std::string &type, const std::string &rule ) const override;
-        bool is_male() const override;
+        bool knows_spell( const spell_id &sp ) const override;
         bool unarmed_attack() const override;
         bool in_control( const vehicle &veh ) const override;
         bool can_stash_weapon() const override;
@@ -64,6 +64,7 @@ class talker_character: public talker
         // override functions called in npctalk.cpp
         bool is_deaf() const override;
         std::string short_description() const override;
+        std::string get_grammatical_genders() const override;
         character_id getID() const override;
         faction *get_faction() const override;
         // override functions called in npctalk.cpp
@@ -87,4 +88,5 @@ class talker_character: public talker
     protected:
         Character *me_chr;
 };
+#endif
 #endif

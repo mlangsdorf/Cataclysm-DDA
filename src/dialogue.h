@@ -88,7 +88,7 @@ struct talk_effect_fun_t {
     public:
         talk_effect_fun_t() = default;
         talk_effect_fun_t( const talkfunction_ptr & );
-        talk_effect_fun_t( const std::function<void( talker & )> & );
+        talk_effect_fun_t( const std::function<void( npc & )> & );
         talk_effect_fun_t( const std::function<void( const dialogue &d )> & );
         void set_companion_mission( const std::string &role_id );
         void set_add_effect( const JsonObject &jo, const std::string &member, bool is_npc = false );
