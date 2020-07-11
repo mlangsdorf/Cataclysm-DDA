@@ -886,8 +886,8 @@ class npc : public player
         std::vector<matype_id> styles_offered_to( const player &p ) const;
         /**
          * Spells that the NPC knows but that the player p doesn't.
-        * not const because get_spell isn't const and both this and p call it
-               */
+         * not const because get_spell isn't const and both this and p call it
+         */
         std::vector<spell_id> spells_offered_to( player &p );
         // State checks
         // We want to kill/mug/etc the player

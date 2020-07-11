@@ -62,12 +62,13 @@ class talker_character: public talker
         int get_skill_level( const skill_id &skill ) const override;
         bool knows_recipe( const recipe &rep ) const override;
         // override functions called in npctalk.cpp
+        bool is_deaf() const override;
         std::string short_description() const override;
         character_id getID() const override;
         faction *get_faction() const override;
         // override functions called in npctalk.cpp
         void say( const std::string &speech ) override;
-        void shout( const std::string &speech ) override;
+        void shout( const std::string &speech = "", bool order = false ) override;
         void add_effect( const efftype_id &new_effect, const time_duration &dur,
                          const bool permanent ) override;
         void remove_effect( const efftype_id &old_effect ) override;

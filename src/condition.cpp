@@ -679,7 +679,7 @@ template<class T>
 void conditional_t<T>::set_npc_train_skills()
 {
     condition = []( const T & d ) {
-        return !d.beta->has_skills_to_train( *d.alpha );
+        return !d.beta->skills_offered_to( *d.alpha ).empty();
     };
 }
 
@@ -687,7 +687,7 @@ template<class T>
 void conditional_t<T>::set_npc_train_styles()
 {
     condition = []( const T & d ) {
-        return !d.beta->has_styles_to_train( *d.alpha );
+        return !d.beta->styles_offered_to( *d.alpha ).empty();
     };
 }
 
@@ -695,7 +695,7 @@ template<class T>
 void conditional_t<T>::set_npc_train_spells()
 {
     condition = []( const T & d ) {
-        return !d.beta->has_spells_to_train( *d.alpha );
+        return !d.beta->spells_offered_to( *d.alpha ).empty();
     };
 }
 

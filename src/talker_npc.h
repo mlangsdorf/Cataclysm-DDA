@@ -35,9 +35,10 @@ class talker_npc : public talker_character
         bool is_following() const override;
         bool is_friendly( const Character &guy ) const override;
         bool is_enemy() const override;
-        bool has_skills_to_train( const talker &guy ) const override;
-        bool has_styles_to_train( const talker &guy ) const override;
-        bool has_spells_to_train( const talker &guy ) const override;
+        std::vector<skill_id> skills_offered_to( const talker &student ) const override;
+        std::vector<matype_id> styles_offered_to( const talker &student ) const override;
+        std::vector<spell_id> spells_offered_to( const talker &student ) const override;
+
         // override getter functions called in npctalk.cpp
         bool will_talk_to_u( const Character &u, const bool force ) override;
         std::vector<std::string> get_topics( const bool radio_contact ) override;
@@ -48,6 +49,7 @@ class talker_npc : public talker_character
         int cash_to_favor( int value ) const override;
         bool buy_from( const int amount ) override;
         bool turned_hostile() const override;
+        bool enslave_mind() override;
         // override setter functions called in npctalk.cpp
         void check_missions() override;
         void update_missions( const std::vector<mission *> &missions_assigned,

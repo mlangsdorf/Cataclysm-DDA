@@ -66,7 +66,7 @@ bool talker_character::has_amount( const itype_id &item_id, int count ) const ov
     return me_chr->has_amount( item_id, count );
 }
 
-std::vector<items *> talker_character::items_with( const item_category_id &category_id ) const
+std::vector<item *> talker_character::items_with( const item_category_id &category_id ) const
 override
 {
     const auto items_with = me_chr->items_with( [category_id]( const item & it ) {
@@ -180,12 +180,14 @@ bool talker_character::can_stash_weapon() const override
     return me_chr->can_pickVolume( me_chr->weapon );
 }
 
-bool talker_character::has_stolen_item( const talker_character &guy ) const override
+bool talker_character::has_stolen_item( const talker &guy ) const override
 {
-    const character &owner = guy.get_character();
-    for( auto &elem : me_chr->inv_dump() ) {
-        if( elem->is_old_owner( &guy, true ) ) {
-            return true;
+    if( guy.get_character() ) {
+        const character *owner = guy.get_character();
+        for( auto &elem : me_chr->inv_dump() ) {
+            if( elem->is_old_owner( guy, true ) ) {
+                return true;
+            }
         }
     }
     return false;
@@ -239,9 +241,9 @@ void talker_character::say( const std::string &speech ) override
     me_chr->say( speech );
 }
 
-void talker_character::shout( const std::string &speech ) override
+void talker_character::shout( const std::string &speech, bool order ) override
 {
-    me_chr->shout( speech );
+    me_chr->shout( speech, order );
 }
 
 void talker_character::add_effect( const efftype_id &new_effect, const time_duration &dur,

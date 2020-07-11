@@ -783,9 +783,9 @@ void avatar::talk_to( std::unique_ptr<talker> talk_with, bool text_only, bool ra
     }
 
     if( !has_effect( effect_under_operation ) ) {
-        cancel_activity_or_ignore_query( distraction_type::talked_to,
-                                         string_format( _( "%s talked to you." ),
-                                                 d.beta->disp_name() ) );
+        g->cancel_activity_or_ignore_query( distraction_type::talked_to,
+                                            string_format( _( "%s talked to you." ),
+                                                    d.beta->disp_name() ) );
     }
 }
 
@@ -870,11 +870,9 @@ std::string dialogue::dynamic_line( const talk_topic &the_topic ) const
     } else if( topic == "TALK_TRAIN" ) {
         if( !g->u.backlog.empty() && g->u.backlog.front().id() == ACT_TRAIN ) {
             return _( "Shall we resume?" );
-        }
-        std::vector<skill_id> trainable = p->skills_offered_to( g->u );
-        std::vector<matype_id> styles = p->styles_offered_to( g->u );
-        std::vector<spell_id> teachable = p->spells_offered_to( g->u );
-        if( trainable.empty() && styles.empty() && teachable.empty() ) {
+        } else if( beta->skills_offered_to( *alpha ).empty() &&
+                   beta->styles_offered_to( *alpha ).empty() &&
+                   beta->spells_offered_to( *alpha ).empty() ) {
             return _( "Sorry, but it doesn't seem I have anything to teach you." );
         } else {
             return _( "Here's what I can teach you…" );
@@ -1029,10 +1027,7 @@ talk_response &dialogue::add_response( const std::string &text, const std::strin
 
 void dialogue::gen_responses( const talk_topic &the_topic )
 {
-    const auto &topic = the_topic.id; // for compatibility, later replace it in the code below
-    const auto p = beta; // for compatibility, later replace it in the code below
-    auto &ret = responses; // for compatibility, later replace it in the code below
-    ret.clear();
+    responses.clear();
     const auto iter = json_talk_topics.find( topic );
     if( iter != json_talk_topics.end() ) {
         json_talk_topic &jtt = iter->second;
@@ -1042,7 +1037,7 @@ void dialogue::gen_responses( const talk_topic &the_topic )
     }
 
     if( topic == "TALK_MISSION_LIST" ) {
-        if( p->chatbin.missions.size() == 1 ) {
+        if( beta->chatbin.missions.size() == 1 ) {
             add_response( _( "Tell me about it." ), "TALK_MISSION_OFFER",
                           p->chatbin.missions.front(), true );
         } else {
@@ -1083,9 +1078,9 @@ void dialogue::gen_responses( const talk_topic &the_topic )
                               "TALK_TRAIN_START", skillt );
             }
         }
-        std::vector<matype_id> styles = p->styles_offered_to( g->u );
-        std::vector<skill_id> trainable = p->skills_offered_to( g->u );
-        std::vector<spell_id> teachable = p->spells_offered_to( g->u );
+        const std::vector<matype_id> &styles = beta->styles_offered_to( *alpha );
+        const std::vector<skill_id> &trainable = beta->skills_offered_to( *alpha );
+        const std::vector<spell_id> &teachable = beta->spells_offered_to( *alpha );
         if( trainable.empty() && styles.empty() && teachable.empty() ) {
             add_response_none( _( "Oh, okay." ) );
             return;
@@ -1135,12 +1130,12 @@ void dialogue::gen_responses( const talk_topic &the_topic )
         add_response_done( _( "Let's keep moving." ) );
     }
 
-    if( g->u.has_trait( trait_DEBUG_MIND_CONTROL ) && !p->is_player_ally() ) {
+    if( alpha->has_trait( trait_DEBUG_MIND_CONTROL ) && !beta->is_player_ally() ) {
         add_response( _( "OBEY ME!" ), "TALK_MIND_CONTROL" );
         add_response_done( _( "Bye." ) );
     }
 
-    if( ret.empty() ) {
+    if( responses.empty() ) {
         add_response_done( _( "Bye." ) );
     }
 }

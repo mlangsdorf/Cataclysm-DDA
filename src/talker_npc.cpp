@@ -95,22 +95,41 @@ bool talker_npc::is_enemy() const override
     return me_npc->is_enemy();
 }
 
-bool talker_npc::has_skills_to_train( const talker_character &guy ) override
+std::vector<skill_id> skills_offered_to( const talker &student ) const override
 {
-    return !me_npc->skills_offered_to( guy.get_character() );
+    if( student->get_character() ) {
+        return me_npc->styles_offered_to( *student->get_character() );
+    } else {
+        return {};
+    }
 }
 
-bool talker_npc::has_styles_to_train( const talker_character &guy ) override
+std::vector<matype_id> styles_offered_to( const talker &student ) const override
 {
-    return !me_npc->styles_offered_to( guy.get_character() );
+    if( student->get_character() ) {
+        return me_npc->styles_offered_to( *student->get_character() );
+    } else {
+        return {};
+    }
+}
+
+std::vector<spell_id> spells_offered_to( const talker &student ) const override
+{
+    if( student->get_character() ) {
+        return me_npc->spells_offered_to( *student->get_character() );
+    } else {
+        return {};
+    }
 }
 
 bool talker_npc::has_stolen_item( const talker_character &guy ) const override
 {
-    const character &owner = guy.get_character();
-    for( auto &elem : me_npc->inv_dump() ) {
-        if( elem->is_old_owner( &guy, true ) ) {
-            return true;
+    if( guy.get_character() ) {
+        const character &owner = guy.get_character();
+        for( auto &elem : me_npc->inv_dump() ) {
+            if( elem->is_old_owner( &guy, true ) ) {
+                return true;
+            }
         }
     }
     return false;
@@ -476,7 +495,7 @@ void talker_npc::make_angry() override
     me_npc->make_angry();
 }
 
-void talker_npc::enslave_mind() override
+bool talker_npc::enslave_mind() override
 {
     bool not_following = g->get_follower_list().count( me.getID() ) == 0;
     me.companion_mission_role_id.clear();

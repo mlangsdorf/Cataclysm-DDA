@@ -142,14 +142,14 @@ class talker
         virtual bool is_enemy() const {
             return false;
         }
-        virtual bool has_skills_to_train( const talker & ) const {
-            return false;
+        virtual std::vector<skill_id> skills_offered_to( const talker & ) const {
+            return {};
         }
-        virtual bool has_styles_to_train( const talker & ) const {
-            return false;
+        virtual std::vector<matype_id> styles_offered_to( const talker & ) const {
+            return {};
         }
-        virtual bool has_spells_to_train( const talker & ) const {
-            return false;
+        virtual std::vector<spell_id> spells_offered_to( const talker & ) const {
+            return {};
         }
         virtual bool unarmed_attack() const {
             return false;
@@ -206,9 +206,15 @@ class talker
         virtual character_id getID() const {
             return character_id( 0 );
         }
+        virtual bool is_deaf() const {
+            return false;
+        }
+        virtual bool enslave_mind() {
+            return false;
+        }
         // virtual setter functions called in npctalk.cpp
         virtual void say( const std::string & ) {}
-        virtual void shout( const std::string & ) {}
+        virtual void shout( const std::string &, bool ) {}
         virtual void set_companion_mission( const std::string & ) {}
         virtual void check_missions() {}
         virtual void update_missions( const std::vector<mission *> &, const character_id & ) {}
