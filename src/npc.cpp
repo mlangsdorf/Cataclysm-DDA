@@ -64,7 +64,7 @@
 #include "stomach.h"
 #include "string_formatter.h"
 #include "talker.h"
-//#include "talker_npc.h"
+#include "talker_npc.h"
 #include "text_snippets.h"
 #include "tileray.h"
 #include "trait_group.h"
@@ -3392,7 +3392,6 @@ std::string npc::describe_mission() const
     } // switch (mission)
 }
 
-#if 0
 std::unique_ptr<talker> get_talker_for( npc &guy )
 {
     return std::make_unique<talker_npc>( &guy );
@@ -3401,13 +3400,3 @@ std::unique_ptr<talker> get_talker_for( npc *guy )
 {
     return std::make_unique<talker_npc>( guy );
 }
-#else
-std::unique_ptr<talker> get_talker_for( npc & )
-{
-    return std::make_unique<talker>();
-}
-std::unique_ptr<talker> get_talker_for( npc * )
-{
-    return std::make_unique<talker>();
-}
-#endif

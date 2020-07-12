@@ -96,7 +96,7 @@ void conditional_t<T>::set_has_any_trait( const JsonObject &jo, const std::strin
         traits_to_check.emplace_back( f );
     }
     condition = [traits_to_check, is_npc]( const T & d ) {
-        const std::unique_ptr<talker> &actor = is_npc ? d.alpha : d.beta;
+        const std::unique_ptr<talker> &actor = is_npc ? d.beta : d.alpha;
         for( const auto &trait : traits_to_check ) {
             if( actor->has_trait( trait ) ) {
                 return true;
@@ -121,7 +121,7 @@ void conditional_t<T>::set_has_trait_flag( const JsonObject &jo, const std::stri
 {
     const std::string &trait_flag_to_check = jo.get_string( member );
     condition = [trait_flag_to_check, is_npc]( const T & d ) {
-        const std::unique_ptr<talker> &actor = is_npc ? d.alpha : d.beta;
+        const std::unique_ptr<talker> &actor = is_npc ? d.beta : d.alpha;
         if( trait_flag_to_check == "MUTATION_THRESHOLD" ) {
             return actor->crossed_threshold();
         }
@@ -223,7 +223,7 @@ void conditional_t<T>::set_has_item( const JsonObject &jo, const std::string &me
 {
     const itype_id item_id( jo.get_string( member ) );
     condition = [item_id, is_npc]( const T & d ) {
-        const std::unique_ptr<talker> &actor = is_npc ? d.alpha : d.beta;
+        const std::unique_ptr<talker> &actor = is_npc ? d.beta : d.alpha;
         return actor->charges_of( item_id ) > 0 || actor->has_amount( item_id, 1 );
     };
 }
@@ -240,7 +240,7 @@ void conditional_t<T>::set_has_items( const JsonObject &jo, const std::string &m
         const itype_id item_id( has_items.get_string( "item" ) );
         int count = has_items.get_int( "count" );
         condition = [item_id, count, is_npc]( const T & d ) {
-            const std::unique_ptr<talker> &actor = is_npc ? d.alpha : d.beta;
+            const std::unique_ptr<talker> &actor = is_npc ? d.beta : d.alpha;
             return actor->has_charges( item_id, count ) || actor->has_amount( item_id, count );
         };
     }
@@ -261,15 +261,11 @@ void conditional_t<T>::set_has_item_category( const JsonObject &jo, const std::s
     }
 
     condition = [category_id, count, is_npc]( const T & d ) {
-        const std::unique_ptr<talker> &actor = is_npc ? d.alpha : d.beta;
-#if 0 // how does items_with get declared?
+        const std::unique_ptr<talker> &actor = is_npc ? d.beta : d.alpha;
         const auto items_with = actor->items_with( [category_id]( const item & it ) {
             return it.get_category().get_id() == category_id;
         } );
         return items_with.size() >= count;
-#endif
-        return actor->has_trait( trait_id( "NO_SUCH_TRAIT" ) ) && count == 2 &&
-               category_id == item_category_id( "NO_SUCH_CATEGORY" );
     };
 }
 
@@ -279,7 +275,7 @@ void conditional_t<T>::set_has_bionics( const JsonObject &jo, const std::string 
 {
     const std::string bionics_id = jo.get_string( member );
     condition = [bionics_id, is_npc]( const T & d ) {
-        const std::unique_ptr<talker> &actor = is_npc ? d.alpha : d.beta;
+        const std::unique_ptr<talker> &actor = is_npc ? d.beta : d.alpha;
         if( bionics_id == "ANY" ) {
             return actor->num_bionics() > 0 || actor->has_max_power();
         }
@@ -312,7 +308,7 @@ void conditional_t<T>::set_need( const JsonObject &jo, const std::string &member
         }
     }
     condition = [need, amount, is_npc]( const T & d ) {
-        const std::unique_ptr<talker> &actor = is_npc ? d.alpha : d.beta;
+        const std::unique_ptr<talker> &actor = is_npc ? d.beta : d.alpha;
         return ( actor->get_fatigue() > amount && need == "fatigue" ) ||
                ( actor->get_hunger() > amount && need == "hunger" ) ||
                ( actor->get_thirst() > amount && need == "thirst" );
@@ -352,7 +348,7 @@ void conditional_t<T>::set_has_var( const JsonObject &jo, const std::string &mem
     const std::string &value = jo.has_member( "value" ) ? jo.get_string( "value" ) : std::string();
     const bool time_check = jo.has_member( "time" ) && jo.get_bool( "time" );
     condition = [var_name, value, time_check, is_npc]( const T & d ) {
-        const std::unique_ptr<talker> &actor = is_npc ? d.alpha : d.beta;
+        const std::unique_ptr<talker> &actor = is_npc ? d.beta : d.alpha;
         if( time_check ) {
             return !actor->get_value( var_name ).empty();
         }
@@ -711,7 +707,7 @@ template<class T>
 void conditional_t<T>::set_can_stow_weapon( bool is_npc )
 {
     condition = [is_npc]( const T & d ) {
-        const std::unique_ptr<talker> &actor = is_npc ? d.alpha : d.beta;
+        const std::unique_ptr<talker> &actor = is_npc ? d.beta : d.alpha;
         return !actor->unarmed_attack() && actor->can_stash_weapon();
     };
 }
@@ -728,7 +724,7 @@ template<class T>
 void conditional_t<T>::set_is_driving( bool is_npc )
 {
     condition = [is_npc]( const T & d ) {
-        const std::unique_ptr<talker> &actor = is_npc ? d.alpha : d.beta;
+        const std::unique_ptr<talker> &actor = is_npc ? d.beta : d.alpha;
         if( const optional_vpart_position vp = get_map().veh_at( actor->pos() ) ) {
             return vp->vehicle().is_moving() && actor->in_control( vp->vehicle() );
         }
@@ -815,9 +811,10 @@ template<class T>
 void conditional_t<T>::set_u_know_recipe( const JsonObject &jo, const std::string &member )
 {
     const std::string &known_recipe_id = jo.get_string( member );
-    condition = [known_recipe_id]( const T & d ) {
+    condition = [known_recipe_id]( const T & ) {
         const recipe &rep = recipe_id( known_recipe_id ).obj();
-        return d.alpha->knows_recipe( rep );
+        // should be a talker function but recipes aren't in Character:: yet
+        return g->u.knows_recipe( &rep );
     };
 }
 

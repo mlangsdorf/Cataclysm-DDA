@@ -2,11 +2,11 @@
 #ifndef CATA_SRC_TALKER_H
 #define CATA_SRC_TALKER_H
 
-class Character;
 class faction;
 class item;
 class mission;
 class npc;
+class player;
 class recipe;
 struct tripoint;
 class vehicle;
@@ -18,12 +18,18 @@ class vehicle;
 class talker
 {
     public:
-        virtual ~talker();
+        virtual ~talker() = default;
         // virtual member accessor functions
-        virtual Character *get_character() {
+        virtual player *get_character() {
+            return nullptr;
+        }
+        virtual player *get_character() const {
             return nullptr;
         }
         virtual npc *get_npc() {
+            return nullptr;
+        }
+        virtual npc *get_npc() const {
             return nullptr;
         }
 
@@ -85,16 +91,19 @@ class talker
         virtual bool has_bionic( const bionic_id & ) const {
             return false;
         }
+        virtual std::vector<item *> items_with( const std::function<bool( const item & )> & ) const {
+            return {};
+        };
         virtual bool has_effect( const efftype_id & ) const {
             return false;
         }
-        virtual bool get_fatigue() const {
+        virtual int get_fatigue() const {
             return 0;
         }
-        virtual bool get_hunger() const {
+        virtual int get_hunger() const {
             return 0;
         }
-        virtual bool get_thirst() const {
+        virtual int get_thirst() const {
             return 0;
         }
         virtual tripoint global_omt_location() const {
@@ -165,7 +174,7 @@ class talker
         virtual std::vector<spell_id> spells_offered_to( talker & ) {
             return {};
         }
-        virtual std::string spell_training_text( talker &, const spell_id & ) const {
+        virtual std::string spell_training_text( talker &, const spell_id & ) {
             return {};
         }
         virtual bool knows_spell( const spell_id & ) const {
@@ -189,11 +198,8 @@ class talker
         virtual int get_skill_level( const skill_id & ) const {
             return false;
         }
-        virtual bool knows_recipe( const recipe & ) const {
-            return false;
-        }
         // virtual getter functions called in npctalk.cpp
-        virtual bool will_talk_to_u( const Character &, const bool ) {
+        virtual bool will_talk_to_u( const player &, const bool ) {
             return false;
         }
         virtual std::vector<std::string> get_topics( const bool ) {
@@ -262,7 +268,6 @@ class talker
             return {};
         }
         virtual void remove_items_with( const std::function<bool( const item & )> & ) {}
-        virtual void sell_to( talker & ) {}
         virtual void set_fac( const faction_id & ) {}
         virtual void set_class( const npc_class_id & ) {}
         virtual void add_faction_rep( const int ) {}
@@ -275,7 +280,6 @@ class talker
         virtual void add_mission( const mission_type_id & ) {}
         virtual void buy_monster( talker &, const mtype_id &, const int, const int, const bool,
                                   const translation & ) {}
-        virtual void learn_recipe( const recipe & ) {}
         virtual void add_opinion( const int, const int, const int, const int ) {}
         virtual void make_angry() {}
 };

@@ -72,6 +72,8 @@
 #include "stomach.h"
 #include "string_formatter.h"
 #include "string_id.h"
+#include "talker.h"
+#include "talker_character.h"
 #include "translations.h"
 #include "trap.h"
 #include "ui.h"
@@ -4100,4 +4102,13 @@ void player::add_msg_player_or_say( const game_message_params &params,
 bool player::query_yn( const std::string &mes ) const
 {
     return ::query_yn( mes );
+}
+
+std::unique_ptr<talker> get_talker_for( player &guy )
+{
+    return std::make_unique<talker_character>( &guy );
+}
+std::unique_ptr<talker> get_talker_for( player *guy )
+{
+    return std::make_unique<talker_character>( guy );
 }

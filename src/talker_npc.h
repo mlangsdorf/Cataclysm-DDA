@@ -1,4 +1,3 @@
-#if 0
 #pragma once
 #ifndef CATA_SRC_TALKER_NPC_H
 #define CATA_SRC_TALKER_NPC_H
@@ -11,6 +10,7 @@ class faction;
 class item;
 class mission;
 class npc;
+class player;
 class recipe;
 struct tripoint;
 class vehicle;
@@ -20,8 +20,14 @@ class vehicle;
 class talker_npc : public talker_character
 {
     public:
-        talker_npc( npc *new_me );
+        talker_npc( npc *new_me ): talker_character( new_me ), me_npc( new_me ) {
+        }
+        ~talker_npc() = default;
+
         npc *get_npc() override {
+            return me_npc;
+        }
+        npc *get_npc() const override {
             return me_npc;
         }
 
@@ -43,11 +49,11 @@ class talker_npc : public talker_character
         std::vector<matype_id> styles_offered_to( const talker &student ) const override;
         std::string style_training_text( const talker &, const matype_id & ) const override;
         std::vector<spell_id> spells_offered_to( talker &student ) override;
-        std::string spell_training_text( talker &, const spell_id & ) const override;
+        std::string spell_training_text( talker &, const spell_id & ) override;
         void store_chosen_training( const skill_id &c_skill, const matype_id &c_style,
                                     const spell_id &c_spell ) override;
         // override getter functions called in npctalk.cpp
-        bool will_talk_to_u( const Character &u, const bool force ) override;
+        bool will_talk_to_u( const player &u, const bool force ) override;
         std::vector<std::string> get_topics( const bool radio_contact ) override;
         std::string get_job_description() const override;
         std::string evaluation_by( const talker &alpha ) const override;
@@ -58,24 +64,24 @@ class talker_npc : public talker_character
         bool turned_hostile() const override;
         bool enslave_mind() override;
         // override setter functions called in npctalk.cpp
+        void say( const std::string &speech ) override;
         void check_missions() override;
         void update_missions( const std::vector<mission *> &missions_assigned,
                               const character_id &charID ) override;
         void set_companion_mission( const std::string &role_id ) override;
         void add_debt( const int cost ) override;
-        void sell_to( talker &buyer ) override;
         void set_fac( const faction_id &new_fac_name ) override;
         void set_class( const npc_class_id &new_class ) override;
         void toggle_ai_rule( const std::string &type, const std::string &rule ) override;
         void set_ai_rule( const std::string &type, const std::string &rule ) override;
         void clear_ai_rule( const std::string &type, const std::string &rule ) override;
-        void give_item_to( const bool to_use ) override;
+        std::string give_item_to( const bool to_use ) override;
         void add_mission( const mission_type_id &mission_id ) override;
         void add_opinion( const int trust, const int fear, const int value, const int anger ) override;
         void make_angry() override;
         bool check_hostile_response( const int anger ) const override;
+        void add_faction_rep( const int rep_change ) override;
     protected:
-        npc *me_npc;
+        mutable npc *me_npc;
 };
-#endif
 #endif

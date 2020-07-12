@@ -46,6 +46,7 @@ class inventory;
 class map;
 class npc;
 class recipe;
+class talker;
 struct pathfinding_settings;
 struct requirement_data;
 
@@ -759,5 +760,8 @@ class player : public Character
         /** Stamp of skills. @ref learned_recipes are valid only with this set of skills. */
         mutable decltype( _skills ) valid_autolearn_skills;
 };
+
+std::unique_ptr<talker> get_talker_for( player &guy );
+std::unique_ptr<talker> get_talker_for( player *guy );
 
 #endif // CATA_SRC_PLAYER_H

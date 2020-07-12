@@ -88,11 +88,7 @@ static const activity_id ACT_WAIT_NPC( "ACT_WAIT_NPC" );
 
 static const efftype_id effect_lying_down( "lying_down" );
 static const efftype_id effect_narcosis( "narcosis" );
-static const efftype_id effect_npc_suspend( "npc_suspend" );
-static const efftype_id effect_pacified( "pacified" );
-static const efftype_id effect_pet( "pet" );
 static const efftype_id effect_riding( "riding" );
-static const efftype_id effect_sleep( "sleep" );
 static const efftype_id effect_under_operation( "under_operation" );
 
 static const itype_id fuel_type_animal( "animal" );
@@ -782,7 +778,7 @@ void avatar::talk_to( std::unique_ptr<talker> talk_with, bool text_only, bool ra
         return;
     }
 
-    if( !has_effect( effect_under_operation ) ) {
+    if( !d.beta->has_effect( effect_under_operation ) ) {
         g->cancel_activity_or_ignore_query( distraction_type::talked_to,
                                             string_format( _( "%s talked to you." ),
                                                     d.beta->disp_name() ) );
@@ -2065,9 +2061,9 @@ void talk_effect_fun_t::set_u_buy_monster( const std::string &monster_type_id, i
 
 void talk_effect_fun_t::set_u_learn_recipe( const std::string &learned_recipe_id )
 {
-    function = [learned_recipe_id]( const dialogue & d ) {
+    function = [learned_recipe_id]( const dialogue & ) {
         const recipe &r = recipe_id( learned_recipe_id ).obj();
-        d.alpha->learn_recipe( r );
+        g->u.learn_recipe( &r );
         popup( _( "You learn how to craft %s." ), r.result_name() );
     };
 }
@@ -2809,7 +2805,6 @@ bool json_talk_topic::gen_responses( dialogue &d ) const
                 switch_done |= repeat.response.gen_repeat_response( d, item_id, switch_done );
             }
         }
-#if 0 // FIXME
         for( const item_category_id &category_id : repeat.for_category ) {
             const bool include_containers = repeat.include_containers;
             const auto items_with = actor->items_with( [category_id,
@@ -2823,7 +2818,6 @@ bool json_talk_topic::gen_responses( dialogue &d ) const
                 switch_done |= repeat.response.gen_repeat_response( d, it->typeId(), switch_done );
             }
         }
-#endif
     }
 
     return replace_built_in_responses;
@@ -2890,185 +2884,6 @@ std::string npc::pick_talk_topic( const player &/*u*/ )
 
     set_attitude( NPCATT_NULL );
     return "TALK_STRANGER_NEUTRAL";
-}
-
-enum consumption_result {
-    REFUSED = 0,
-    CONSUMED_SOME, // Consumption didn't fail, but don't delete the item
-    CONSUMED_ALL   // Consumption succeeded, delete the item
-};
-
-// Returns true if we destroyed the item through consumption
-// does not try to consume contents
-static consumption_result try_consume( npc &p, item &it, std::string &reason )
-{
-    // TODO: Unify this with 'player::consume_item()'
-    item &to_eat = it;
-    if( to_eat.is_null() ) {
-        debugmsg( "Null item to try_consume." );
-        return REFUSED;
-    }
-    const auto &comest = to_eat.get_comestible();
-    if( !comest ) {
-        // Don't inform the player that we don't want to eat the lighter
-        return REFUSED;
-    }
-
-    if( !p.will_accept_from_player( it ) ) {
-        reason = _( "I don't <swear> trust you enough to eat THIS…" );
-        return REFUSED;
-    }
-
-    // TODO: Make it not a copy+paste from player::consume_item
-    int amount_used = 1;
-    if( to_eat.is_food() ) {
-        if( !p.can_consume( to_eat ) ) {
-            reason = _( "It doesn't look like a good idea to consume this…" );
-            return REFUSED;
-        } else {
-            const time_duration &consume_time = p.get_consume_time( to_eat );
-            p.moves -= to_moves<int>( consume_time );
-            p.consume( to_eat );
-            reason = _( "Thanks, that hit the spot." );
-
-        }
-    } else if( to_eat.is_medication() ) {
-        if( !comest->tool.is_null() ) {
-            bool has = p.has_amount( comest->tool, 1 );
-            if( item::count_by_charges( comest->tool ) ) {
-                has = p.has_charges( comest->tool, 1 );
-            }
-            if( !has ) {
-                reason = string_format( _( "I need a %s to consume that!" ),
-                                        item::nname( comest->tool ) );
-                return REFUSED;
-            }
-            p.use_charges( comest->tool, 1 );
-            reason = _( "Thanks, I feel better already." );
-        }
-        if( to_eat.type->has_use() ) {
-            amount_used = to_eat.type->invoke( p, to_eat, p.pos() );
-            if( amount_used <= 0 ) {
-                reason = _( "It doesn't look like a good idea to consume this…" );
-                return REFUSED;
-            }
-            reason = _( "Thanks, I used it." );
-        }
-
-        to_eat.charges -= amount_used;
-        p.consume_effects( to_eat );
-        p.moves -= 250;
-    } else {
-        debugmsg( "Unknown comestible type of item: %s\n", to_eat.tname() );
-    }
-
-    if( to_eat.charges > 0 ) {
-        return CONSUMED_SOME;
-    }
-
-    // If not consuming contents and charge <= 0, we just ate the last charge from the stack
-    return CONSUMED_ALL;
-}
-
-std::string give_item_to( npc &p, bool allow_use )
-{
-    if( p.is_hallucination() ) {
-        return _( "No thanks, I'm good." );
-    }
-    item_location loc = game_menus::inv::titled_menu( g->u, _( "Offer what?" ),
-                        _( "You have no items to offer." ) );
-    if( !loc ) {
-        return _( "Changed your mind?" );
-    }
-    item &given = *loc;
-
-    if( ( &given == &g->u.weapon && given.has_flag( "NO_UNWIELD" ) ) || ( g->u.is_worn( given ) &&
-            given.has_flag( "NO_TAKEOFF" ) ) ) {
-        // Bionic weapon or shackles
-        return _( "How?" );
-    }
-
-    if( given.is_dangerous() && !g->u.has_trait( trait_DEBUG_MIND_CONTROL ) ) {
-        return _( "Are you <swear> insane!?" );
-    }
-
-    bool taken = false;
-    std::string reason = _( "Nope." );
-    int our_ammo = p.ammo_count_for( p.weapon );
-    int new_ammo = p.ammo_count_for( given );
-    const double new_weapon_value = p.weapon_value( given, new_ammo );
-    const double cur_weapon_value = p.weapon_value( p.weapon, our_ammo );
-    add_msg( m_debug, "NPC evaluates own %s (%d ammo): %0.1f",
-             p.weapon.typeId().str(), our_ammo, cur_weapon_value );
-    add_msg( m_debug, "NPC evaluates your %s (%d ammo): %0.1f",
-             given.typeId().str(), new_ammo, new_weapon_value );
-    if( allow_use ) {
-        // Eating first, to avoid evaluating bread as a weapon
-        const auto consume_res = try_consume( p, given, reason );
-        if( consume_res != REFUSED ) {
-            if( consume_res == CONSUMED_ALL ) {
-                g->u.i_rem( &given );
-            }
-            g->u.moves -= 100;
-            if( given.is_container() ) {
-                given.on_contents_changed();
-            }
-        }// wield it if its a weapon
-        else if( new_weapon_value > cur_weapon_value ) {
-            p.wield( given );
-            reason = _( "Thanks, I'll wield that now." );
-            taken = true;
-        }// HACK: is_gun here is a hack to prevent NPCs wearing guns if they don't want to use them
-        else if( !given.is_gun() && given.is_armor() ) {
-            //if it is impossible to wear return why
-            ret_val<bool> can_wear = p.can_wear( given, true );
-            if( !can_wear.success() ) {
-                reason = can_wear.str();
-            } else {
-                //if we can wear it with equip changes prompt first
-                can_wear = p.can_wear( given );
-                if( ( can_wear.success() ||
-                      query_yn( can_wear.str() + _( " Should I take something off?" ) ) )
-                    && p.wear_if_wanted( given, reason ) ) {
-                    taken = true;
-                } else {
-                    reason = can_wear.str();
-                }
-            }
-        } else {
-            reason += string_format(
-                          _( "My current weapon is better than this.\n(new weapon value: %.1f vs %.1f)." ), new_weapon_value,
-                          cur_weapon_value );
-        }
-    } else {//allow_use is false so try to carry instead
-        if( p.can_pickVolume( given ) && p.can_pickWeight( given ) ) {
-            reason = _( "Thanks, I'll carry that now." );
-            taken = true;
-            p.i_add( given );
-        } else {
-            if( !p.can_pickVolume( given ) ) {
-                const units::volume free_space = p.volume_capacity() - p.volume_carried();
-                reason += "\n" + std::string( _( "I have no space to store it." ) ) + "\n";
-                if( free_space > 0_ml ) {
-                    reason += string_format( _( "I can only store %s %s more." ),
-                                             format_volume( free_space ), volume_units_long() );
-                } else {
-                    reason += _( "…or to store anything else for that matter." );
-                }
-            }
-            if( !p.can_pickWeight( given ) ) {
-                reason += std::string( "\n" ) + _( "It is too heavy for me to carry." );
-            }
-        }
-    }
-
-    if( taken ) {
-        g->u.i_rem( &given );
-        g->u.moves -= 100;
-        p.has_new_items = true;
-    }
-
-    return reason;
 }
 
 bool npc::has_item_whitelist() const
