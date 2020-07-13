@@ -13,6 +13,13 @@
 static const efftype_id effect_pacified( "pacified" );
 static const efftype_id effect_pet( "pet" );
 
+static const skill_id skill_speech( "speech" );
+
+static const bionic_id bio_armor_eyes( "bio_armor_eyes" );
+static const bionic_id bio_deformity( "bio_deformity" );
+static const bionic_id bio_face_mask( "bio_face_mask" );
+static const bionic_id bio_voice( "bio_voice" );
+
 static const trait_id trait_PROF_FOODP( "PROF_FOODP" );
 
 std::string talker_character::disp_name() const
@@ -23,6 +30,11 @@ std::string talker_character::disp_name() const
 bool talker_character::has_trait( const trait_id &trait_to_check ) const
 {
     return me_chr->has_trait( trait_to_check );
+}
+
+bool talker_character::has_trait_flag( const std::string &trait_flag_to_check ) const
+{
+    return me_chr->has_trait_flag( trait_flag_to_check );
 }
 
 bool talker_character::crossed_threshold() const
@@ -333,4 +345,59 @@ void talker_character::buy_monster( talker &seller, const mtype_id &mtype, int c
     } else {
         popup( _( "%1$s gives you %2$s." ), seller_guy->name, name );
     }
+}
+
+int talker_character::parse_mod( const std::string &attribute, const int factor ) const
+{
+    int modifier = 0;
+    if( attribute == "U_INTIMIDATE" ) {
+        modifier = me_chr->intimidation();
+    }
+    modifier *= factor;
+    return modifier;
+}
+
+int talker_character::trial_chance_mod( const std::string &trial_type ) const
+{
+    int chance = 0;
+    const social_modifiers &me_mods = me_chr->get_mutation_social_mods();
+    if( trial_type == "lie" ) {
+        chance += me_chr->talk_skill() + me_mods.lie;
+
+        //come on, who would suspect a robot of lying?
+        if( me_chr->has_bionic( bio_voice ) ) {
+            chance += 10;
+        }
+        if( me_chr->has_bionic( bio_face_mask ) ) {
+            chance += 20;
+        }
+    } else if( trial_type == "persuade" ) {
+        chance += me_chr->talk_skill() + me_mods.persuade;
+
+        if( me_chr->has_bionic( bio_face_mask ) ) {
+            chance += 10;
+        }
+        if( me_chr->has_bionic( bio_deformity ) ) {
+            chance -= 50;
+        }
+        if( me_chr->has_bionic( bio_voice ) ) {
+            chance -= 20;
+        }
+    } else if( trial_type == "intimidate" ) {
+        chance += me_chr->intimidation() + me_mods.intimidate;
+
+        if( me_chr->has_bionic( bio_face_mask ) ) {
+            chance += 10;
+        }
+        if( me_chr->has_bionic( bio_armor_eyes ) ) {
+            chance += 10;
+        }
+        if( me_chr->has_bionic( bio_deformity ) ) {
+            chance += 20;
+        }
+        if( me_chr->has_bionic( bio_voice ) ) {
+            chance += 20;
+        }
+    }
+    return chance;
 }

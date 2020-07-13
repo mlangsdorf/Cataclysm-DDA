@@ -742,9 +742,9 @@ void talker_npc::add_mission( const mission_type_id &mission_id )
 }
 
 void talker_npc::add_opinion( const int trust, const int fear, const int value,
-                              const int anger )
+                              const int anger, const int debt )
 {
-    me_npc->op_of_u += npc_opinion( trust, fear, value, anger, 0 );
+    me_npc->op_of_u += npc_opinion( trust, fear, value, anger, debt );
 }
 
 bool talker_npc::buy_from( const int amount )
@@ -768,4 +768,51 @@ bool talker_npc::enslave_mind()
     me_npc->companion_mission_role_id.clear();
     talk_function::follow( *me_npc );
     return not_following;
+}
+
+// Every OWED_VAL that the NPC owes you counts as +1 towards convincing
+static constexpr int OWED_VAL = 1000;
+int talker_npc::parse_mod( const std::string &attribute, const int factor ) const
+{
+    int modifier = 0;
+    if( attribute == "ANGER" ) {
+        modifier = me_npc->op_of_u.anger;
+    } else if( attribute == "FEAR" ) {
+        modifier = me_npc->op_of_u.fear;
+    } else if( attribute == "TRUST" ) {
+        modifier = me_npc->op_of_u.trust;
+    } else if( attribute == "VALUE" ) {
+        modifier = me_npc->op_of_u.value;
+    } else if( attribute == "POS_FEAR" ) {
+        modifier = std::max( 0, me_npc->op_of_u.fear );
+    } else if( attribute == "AGGRESSION" ) {
+        modifier = me_npc->personality.aggression;
+    } else if( attribute == "ALTRUISM" ) {
+        modifier = me_npc->personality.altruism;
+    } else if( attribute == "BRAVERY" ) {
+        modifier = me_npc->personality.bravery;
+    } else if( attribute == "COLLECTOR" ) {
+        modifier = me_npc->personality.collector;
+    } else if( attribute == "MISSIONS" ) {
+        modifier = me_npc->assigned_missions_value() / OWED_VAL;
+    } else if( attribute == "NPC_INTIMIDATE" ) {
+        modifier = me_npc->intimidation();
+    }
+    modifier *= factor;
+    return modifier;
+}
+
+int talker_npc::trial_chance_mod( const std::string &trial_type ) const
+{
+    int chance = 0;
+    if( trial_type == "lie" ) {
+        chance += - me_npc->talk_skill() + me_npc->op_of_u.trust * 3;
+    } else if( trial_type == "persuade" ) {
+        chance += - static_cast<int>( me_npc->talk_skill() * 0.5 ) +
+                  me_npc->op_of_u.trust * 2 + me_npc->op_of_u.value;
+    } else if( trial_type == "intimidate" ) {
+        chance += - me_npc->intimidation() + me_npc->op_of_u.fear * 2 -
+                  me_npc->personality.bravery * 2;
+    }
+    return chance;
 }

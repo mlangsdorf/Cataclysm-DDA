@@ -63,6 +63,8 @@ class talker_npc : public talker_character
         bool buy_from( const int amount ) override;
         bool turned_hostile() const override;
         bool enslave_mind() override;
+        int parse_mod( const std::string &attribute, const int factor ) const override;
+        int trial_chance_mod( const std::string &trial_type ) const override;
         // override setter functions called in npctalk.cpp
         void say( const std::string &speech ) override;
         void check_missions() override;
@@ -77,7 +79,8 @@ class talker_npc : public talker_character
         void clear_ai_rule( const std::string &type, const std::string &rule ) override;
         std::string give_item_to( const bool to_use ) override;
         void add_mission( const mission_type_id &mission_id ) override;
-        void add_opinion( const int trust, const int fear, const int value, const int anger ) override;
+        void add_opinion( const int trust, const int fear, const int value, const int anger,
+                          const int debt ) override;
         void make_angry() override;
         bool check_hostile_response( const int anger ) const override;
         void add_faction_rep( const int rep_change ) override;

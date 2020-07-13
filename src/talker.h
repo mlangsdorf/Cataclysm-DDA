@@ -10,6 +10,7 @@ class player;
 class recipe;
 struct tripoint;
 class vehicle;
+
 /*
  * Talker is an entity independent way of providing a participant in a dialogue.
  * Talker is a virtual abstract class and should never really be used.  Instead,
@@ -247,6 +248,12 @@ class talker
         virtual bool check_hostile_response( const int ) const {
             return false;
         }
+        virtual int parse_mod( const std::string &, const int ) const {
+            return 0;
+        }
+        virtual int trial_chance_mod( const std::string & ) const {
+            return 0;
+        }
         // virtual setter functions called in npctalk.cpp
         virtual void say( const std::string & ) {}
         virtual void shout( const std::string & = "", bool = false ) {}
@@ -280,7 +287,7 @@ class talker
         virtual void add_mission( const mission_type_id & ) {}
         virtual void buy_monster( talker &, const mtype_id &, const int, const int, const bool,
                                   const translation & ) {}
-        virtual void add_opinion( const int, const int, const int, const int ) {}
+        virtual void add_opinion( const int, const int, const int, const int, const int ) {}
         virtual void make_angry() {}
 };
 #endif

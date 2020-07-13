@@ -33,6 +33,7 @@ class talker_character: public talker
         // override functions called in condition.cpp
         std::string disp_name() const override;
         bool has_trait( const trait_id &trait_to_check ) const override;
+        bool has_trait_flag( const std::string &trait_flag_to_check ) const override;
         bool crossed_threshold() const override;
         bool has_activity() const override;
         bool is_mounted() const override;
@@ -73,6 +74,8 @@ class talker_character: public talker
         std::vector<std::string> get_grammatical_genders() const override;
         character_id getID() const override;
         faction *get_faction() const override;
+        int parse_mod( const std::string &attribute, const int factor ) const override;
+        int trial_chance_mod( const std::string &trial_type ) const override;
         // override functions called in npctalk.cpp
         void shout( const std::string &speech = "", bool order = false ) override;
         void add_effect( const efftype_id &new_effect, const time_duration &dur,

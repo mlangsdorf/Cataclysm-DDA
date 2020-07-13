@@ -98,18 +98,10 @@ static const zone_type_id zone_type_NPC_NO_INVESTIGATE( "NPC_NO_INVESTIGATE" );
 
 static const skill_id skill_speech( "speech" );
 
-static const bionic_id bio_armor_eyes( "bio_armor_eyes" );
-static const bionic_id bio_deformity( "bio_deformity" );
-static const bionic_id bio_face_mask( "bio_face_mask" );
-static const bionic_id bio_voice( "bio_voice" );
-
 static const trait_id trait_DEBUG_MIND_CONTROL( "DEBUG_MIND_CONTROL" );
 static const trait_id trait_PROF_FOODP( "PROF_FOODP" );
 
 static std::map<std::string, json_talk_topic> json_talk_topics;
-
-// Every OWED_VAL that the NPC owes you counts as +1 towards convincing
-static constexpr int OWED_VAL = 1000;
 
 #define dbg(x) DebugLog((x),D_GAME) << __FILE__ << ":" << __LINE__ << ": "
 
@@ -1115,112 +1107,37 @@ void dialogue::gen_responses( const talk_topic &the_topic )
     }
 }
 
-// FIXME: should be a talker function
 static int parse_mod( const dialogue &d, const std::string &attribute, const int factor )
 {
-    if( !d.beta->get_npc() ) {
-        return 0;
-    }
-    Character &u = *d.alpha->get_character();
-    npc &p = *d.beta->get_npc();
-    int modifier = 0;
-    if( attribute == "ANGER" ) {
-        modifier = p.op_of_u.anger;
-    } else if( attribute == "FEAR" ) {
-        modifier = p.op_of_u.fear;
-    } else if( attribute == "TRUST" ) {
-        modifier = p.op_of_u.trust;
-    } else if( attribute == "VALUE" ) {
-        modifier = p.op_of_u.value;
-    } else if( attribute == "POS_FEAR" ) {
-        modifier = std::max( 0, p.op_of_u.fear );
-    } else if( attribute == "AGGRESSION" ) {
-        modifier = p.personality.aggression;
-    } else if( attribute == "ALTRUISM" ) {
-        modifier = p.personality.altruism;
-    } else if( attribute == "BRAVERY" ) {
-        modifier = p.personality.bravery;
-    } else if( attribute == "COLLECTOR" ) {
-        modifier = p.personality.collector;
-    } else if( attribute == "MISSIONS" ) {
-        modifier = p.assigned_missions_value() / OWED_VAL;
-    } else if( attribute == "U_INTIMIDATE" ) {
-        modifier = u.intimidation();
-    } else if( attribute == "NPC_INTIMIDATE" ) {
-        modifier = p.intimidation();
-    }
-    modifier *= factor;
-    return modifier;
+    return d.beta->parse_mod( attribute, factor ) + d.alpha->parse_mod( attribute, factor );
 }
 
 int talk_trial::calc_chance( const dialogue &d ) const
 {
-    Character &u = *d.alpha->get_character();
-    if( u.has_trait( trait_DEBUG_MIND_CONTROL ) ) {
+    if( d.alpha->has_trait( trait_DEBUG_MIND_CONTROL ) ) {
         return 100;
     }
-    const social_modifiers &u_mods = u.get_mutation_social_mods();
-
-    /* so you're trying to lie to your toaster.  how does that even work?  anyway, FIXME */
-    if( !d.beta->get_npc() ) {
-        return 50;
-    }
-    npc &p = *d.beta->get_npc();
     int chance = difficulty;
     switch( type ) {
         case NUM_TALK_TRIALS:
             dbg( D_ERROR ) << "called calc_chance with invalid talk_trial value: " << type;
-            break;
-        case TALK_TRIAL_LIE:
-            chance += u.talk_skill() - p.talk_skill() + p.op_of_u.trust * 3;
-            chance += u_mods.lie;
-
-            //come on, who would suspect a robot of lying?
-            if( u.has_bionic( bio_voice ) ) {
-                chance += 10;
-            }
-            if( u.has_bionic( bio_face_mask ) ) {
-                chance += 20;
-            }
-            break;
-        case TALK_TRIAL_PERSUADE:
-            chance += u.talk_skill() - static_cast<int>( p.talk_skill() / 2 ) +
-                      p.op_of_u.trust * 2 + p.op_of_u.value;
-            chance += u_mods.persuade;
-
-            if( u.has_bionic( bio_face_mask ) ) {
-                chance += 10;
-            }
-            if( u.has_bionic( bio_deformity ) ) {
-                chance -= 50;
-            }
-            if( u.has_bionic( bio_voice ) ) {
-                chance -= 20;
-            }
-            break;
-        case TALK_TRIAL_INTIMIDATE:
-            chance += u.intimidation() - p.intimidation() + p.op_of_u.fear * 2 -
-                      p.personality.bravery * 2;
-            chance += u_mods.intimidate;
-
-            if( u.has_bionic( bio_face_mask ) ) {
-                chance += 10;
-            }
-            if( u.has_bionic( bio_armor_eyes ) ) {
-                chance += 10;
-            }
-            if( u.has_bionic( bio_deformity ) ) {
-                chance += 20;
-            }
-            if( u.has_bionic( bio_voice ) ) {
-                chance += 20;
-            }
             break;
         case TALK_TRIAL_NONE:
             chance = 100;
             break;
         case TALK_TRIAL_CONDITION:
             chance = condition( d ) ? 100 : 0;
+            break;
+        case TALK_TRIAL_LIE:
+            chance += d.alpha->trial_chance_mod( "lie" ) + d.beta->trial_chance_mod( "lie" );
+            break;
+        case TALK_TRIAL_PERSUADE:
+            chance += d.alpha->trial_chance_mod( "persuade" ) +
+                      d.beta->trial_chance_mod( "persuade" );
+            break;
+        case TALK_TRIAL_INTIMIDATE:
+            chance += d.alpha->trial_chance_mod( "intimidate" ) +
+                      d.beta->trial_chance_mod( "intimidate" );
             break;
     }
     for( const auto &this_mod : modifiers ) {
@@ -2111,14 +2028,15 @@ talk_topic talk_effect_t::apply( dialogue &d ) const
     for( const talk_effect_fun_t &effect : effects ) {
         effect( d );
     }
-    d.beta->add_opinion( opinion.trust, opinion.fear, opinion.value, opinion.anger );
+    d.beta->add_opinion( opinion.trust, opinion.fear, opinion.value, opinion.anger, opinion.owed );
     if( miss && ( mission_opinion.trust || mission_opinion.fear ||
                   mission_opinion.value || mission_opinion.anger ) ) {
         int m_value = d.beta->cash_to_favor( miss->get_value() );
         d.beta->add_opinion( mission_opinion.trust ?  m_value / mission_opinion.trust : 0,
                              mission_opinion.fear ?  m_value / mission_opinion.fear : 0,
                              mission_opinion.value ?  m_value / mission_opinion.value : 0,
-                             mission_opinion.anger ?  m_value / mission_opinion.anger : 0 );
+                             mission_opinion.anger ?  m_value / mission_opinion.anger : 0,
+                             0 );
     }
     if( d.beta->turned_hostile() ) {
         d.beta->make_angry();
