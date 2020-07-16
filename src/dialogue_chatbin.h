@@ -2,14 +2,20 @@
 #ifndef CATA_SRC_DIALOGUE_CHATBIN_H
 #define CATA_SRC_DIALOGUE_CHATBIN_H
 
+#include <unordered_map>
+#include <set>
 #include <string>
 #include <vector>
+#include "pimpl.h"
 #include "string_id.h"
 #include "type_id.h"
 
+class character_id;
 class JsonIn;
+class JsonObject;
 class JsonOut;
 class mission;
+class SkillLevelMap;
 
 struct dialogue_chatbin {
     /**
@@ -58,6 +64,33 @@ struct dialogue_chatbin {
     void clear_all();
     void serialize( JsonOut &json ) const;
     void deserialize( JsonIn &jsin );
+};
+
+/*
+ * A dialogue_chatbin with additional private members for skills, spells, styles, traits,
+ * effects, and values.  Intended to be used with game entities that don't have any of those
+ * members normally but might want them for dialogue purposes.
+ */
+struct smart_chatbin : public dialogue_chatbin {
+    smart_chatbin() = default;
+    void load( const JsonObject &jo, const std::string & );
+    void check();
+    void reset();
+    void serialize( JsonOut &json ) const;
+    void deserialize( JsonIn &jsin );
+
+    std::string my_id;
+    character_id my_npc_id;
+    std::set<spell_id> my_spells;
+    std::set<matype_id> my_styles;
+    std::unordered_map<std::string, std::string> my_values;
+    // random entities may not have traits or effects, so these are just sets of ids
+    // that the entity would have if it were an NPC
+    std::set<trait_id> my_traits;
+    std::set<efftype_id> my_effects;
+    pimpl<SkillLevelMap> my_skills;
+    faction *my_faction;
+
 };
 
 #endif // CATA_SRC_DIALOGUE_CHATBIN_H
