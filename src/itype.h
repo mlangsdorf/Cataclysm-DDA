@@ -13,6 +13,7 @@
 #include "calendar.h"
 #include "color.h" // nc_color
 #include "damage.h"
+#include "dialogue_chatbin.h"
 #include "enums.h" // point
 #include "explosion.h"
 #include "game_constants.h"
@@ -873,6 +874,7 @@ struct itype {
         cata::value_ptr<islot_artifact> artifact;
         cata::value_ptr<relic> relic_data;
         cata::value_ptr<islot_milling> milling_data;
+	cata::value_ptr<smart_chatbin> dialogue_data;
         /*@}*/
 
         // a hint for tilesets: if it doesn't have a tile, what does it look like?

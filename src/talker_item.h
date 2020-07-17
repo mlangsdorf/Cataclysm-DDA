@@ -8,6 +8,7 @@ class mission;
 class npc;
 class player;
 class recipe;
+class smart_chatbin;
 struct tripoint;
 class vehicle;
 
@@ -19,6 +20,7 @@ class vehicle;
 class talker_item : public talker
 {
     public:
+	talker( item *me ) : me_item( me ), me_chat( me->get_chatbin() );
         virtual ~talker_item() = default;
         // member accessor functions
 
@@ -89,5 +91,8 @@ class talker_item : public talker
 
         // miscellaneous
         void set_first_topic( const std::string &new_chat ) override;
+    protected:
+	item *me_item;
+	smart_chatbin &me_chat;
 };
 #endif // CATA_SRC_TALKER_ITEM_H

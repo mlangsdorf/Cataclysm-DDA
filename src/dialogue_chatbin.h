@@ -6,16 +6,17 @@
 #include <set>
 #include <string>
 #include <vector>
+#include "character_id.h"
 #include "pimpl.h"
+#include "skill.h"
 #include "string_id.h"
 #include "type_id.h"
 
-class character_id;
+class faction;
 class JsonIn;
 class JsonObject;
 class JsonOut;
 class mission;
-class SkillLevelMap;
 
 struct dialogue_chatbin {
     /**
@@ -83,6 +84,7 @@ struct smart_chatbin : public dialogue_chatbin {
     character_id my_npc_id;
     std::set<spell_id> my_spells;
     std::set<matype_id> my_styles;
+    std::set<bionic_id> my_bionics;
     std::unordered_map<std::string, std::string> my_values;
     // random entities may not have traits or effects, so these are just sets of ids
     // that the entity would have if it were an NPC
