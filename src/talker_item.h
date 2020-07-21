@@ -20,7 +20,7 @@ class vehicle;
 class talker_item : public talker
 {
     public:
-	talker( item *me ) : me_item( me ), me_chat( me->get_chatbin() );
+        talker_item( item *new_me );
         virtual ~talker_item() = default;
         // member accessor functions
 
@@ -31,7 +31,7 @@ class talker_item : public talker
         int posy() const override;
         int posz() const override;
         tripoint pos() const override;
-        tripoint global_omt_location() const override;
+        tripoint_abs_omt global_omt_location() const override;
 
         // mandatory functions for starting a dialogue
         bool will_talk_to_u( const player &, bool ) override;
@@ -48,7 +48,7 @@ class talker_item : public talker
         bool crossed_threshold() const override;
         int num_bionics() const override;
         bool has_bionic( const bionic_id &bio_to_test ) const override;
-        bool knows_spell( const spell_id &spell_to_test ) const override
+        bool knows_spell( const spell_id &spell_to_test ) const override;
         std::vector<skill_id> skills_offered_to( const talker &student ) const override;
         std::string skill_training_text( const talker &student,
                                          const skill_id &skill_to_learn ) const override;
@@ -92,7 +92,13 @@ class talker_item : public talker
         // miscellaneous
         void set_first_topic( const std::string &new_chat ) override;
     protected:
-	item *me_item;
-	smart_chatbin &me_chat;
+        item *me_item;
+    private:
+        smart_chatbin &me_chat() {
+            return *me_item->get_chatbin();
+        }
+        smart_chatbin &me_chat() const {
+            return *me_item->get_chatbin();
+        }
 };
 #endif // CATA_SRC_TALKER_ITEM_H

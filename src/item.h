@@ -47,6 +47,7 @@ class nc_color;
 class player;
 class recipe;
 class relic;
+class smart_chatbin;
 struct armor_portion_data;
 struct islot_comestible;
 struct itype;
@@ -2058,6 +2059,7 @@ class item : public visitable<item>
         bool is_old_owner( const Character &c, bool available_to_take = false ) const;
         std::string get_owner_name() const;
         int get_min_str() const;
+        cata::value_ptr<smart_chatbin> get_chatbin();
 
         const cata::value_ptr<islot_comestible> &get_comestible() const;
 
@@ -2225,6 +2227,8 @@ class item : public visitable<item>
 
         // any relic data specific to this item
         cata::value_ptr<relic> relic_data;
+        // any chatbin information specific to this item
+        cata::value_ptr<smart_chatbin> chatbin;
     public:
         int charges = 0;
         units::energy energy = 0_mJ; // Amount of energy currently stored in a battery

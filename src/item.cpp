@@ -1397,6 +1397,18 @@ void item::validate_ownership() const
     }
 }
 
+cata::value_ptr<smart_chatbin> item::get_chatbin()
+{
+    if( !chatbin ) {
+        if( type->dialogue_data ) {
+            chatbin = type->dialogue_data; // some transform here?
+        } else {
+            chatbin = nullptr;
+        }
+    }
+    return chatbin;
+}
+
 static void insert_separation_line( std::vector<iteminfo> &info )
 {
     if( info.empty() || info.back().sName != "--" ) {

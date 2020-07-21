@@ -874,7 +874,7 @@ struct itype {
         cata::value_ptr<islot_artifact> artifact;
         cata::value_ptr<relic> relic_data;
         cata::value_ptr<islot_milling> milling_data;
-	cata::value_ptr<smart_chatbin> dialogue_data;
+        cata::value_ptr<smart_chatbin> dialogue_data;
         /*@}*/
 
         // a hint for tilesets: if it doesn't have a tile, what does it look like?
