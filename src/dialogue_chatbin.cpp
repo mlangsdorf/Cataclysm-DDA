@@ -70,6 +70,7 @@ void smart_chatbin::load( const JsonObject &jo, const std::string & )
     optional( jo, was_loaded, "styles", my_styles );
     optional( jo, was_loaded, "spells", my_spells );
     optional( jo, was_loaded, "values", my_values );
+    optional( jo, was_loaded, "bionics", my_bionics );
     if( jo.has_object( "skills" ) ) {
         JsonObject jo_skill = jo.get_object( "skills" );
         for( JsonMember jm : jo_skill ) {

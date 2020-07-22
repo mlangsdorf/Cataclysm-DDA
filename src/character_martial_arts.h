@@ -37,6 +37,7 @@ class character_martial_arts
         bool pick_style( const avatar &you );
 
         bool knows_selected_style() const;
+        bool knows_style( const matype_id &style_to_check ) const;
         bool selected_strictly_melee() const;
         bool selected_allow_melee() const;
         bool selected_has_weapon( const itype_id &weap ) const;

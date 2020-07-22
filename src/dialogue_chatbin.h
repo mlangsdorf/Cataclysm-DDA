@@ -82,7 +82,7 @@ struct smart_chatbin : public dialogue_chatbin {
 
     std::string my_id;
     character_id my_npc_id;
-    std::set<spell_id> my_spells;
+    std::unordered_map<spell_id, int> my_spells;
     std::set<matype_id> my_styles;
     std::set<bionic_id> my_bionics;
     std::unordered_map<std::string, std::string> my_values;

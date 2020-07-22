@@ -3,6 +3,7 @@
 #include "character_id.h"
 #include "dialogue_chatbin.h"
 #include "item.h"
+#include "messages.h"
 #include "mission.h"
 #include "mutation.h"
 #include "skill.h"
@@ -49,7 +50,7 @@ tripoint talker_item::pos() const
 
 tripoint_abs_omt talker_item::global_omt_location() const
 {
-    return tripoint_zero;
+    return tripoint_abs_omt( 0, 0, 0 );
 }
 
 // mandatory functions for starting a dialogue
@@ -60,21 +61,39 @@ bool talker_item::will_talk_to_u( const player &, bool )
 
 std::vector<std::string> talker_item::get_topics( bool )
 {
-    return {};
+    std::vector<std::string> all_topics;
+    all_topics.push_back( me_chat().first_topic );
+    return all_topics;
 }
 
 void talker_item::check_missions()
 {
+    me_chat().check_missions();
 }
 
-void talker_item::update_missions( const std::vector<mission *> &, const character_id & )
+void talker_item::update_missions( const std::vector<mission *> &missions_assigned,
+                                   const character_id &avatar_id )
 {
+    if( me_chat().mission_selected != nullptr ) {
+        if( me_chat().mission_selected->get_assigned_player_id() != avatar_id ) {
+            // Don't talk about a mission that is assigned to someone else.
+            me_chat().mission_selected = nullptr;
+        }
+    }
+    if( me_chat().mission_selected == nullptr ) {
+        // if possible, select a mission to talk about
+        if( !me_chat().missions.empty() ) {
+            me_chat().mission_selected = me_chat().missions.front();
+        } else if( !missions_assigned.empty() ) {
+            me_chat().mission_selected = missions_assigned.front();
+        }
+    }
 }
 
 // stats, skills, traits, bionics, and magic
 int talker_item::get_skill_level( const skill_id &skill ) const
 {
-    return me_chat().my_skills.get_skill_level( skill );
+    return me_chat().my_skills->get_skill_level( skill );
 }
 
 bool talker_item::has_trait( const trait_id &trait_to_test ) const
@@ -136,63 +155,111 @@ bool talker_item::knows_spell( const spell_id &spell_to_test ) const
 std::vector<skill_id> talker_item::skills_offered_to( const talker &student ) const
 {
     player *pupil = student.get_character();
+    std::vector<skill_id> ret;
     if( pupil ) {
-        return {};
-    } else {
-        return {};
+        for( const auto &pair : *me_chat().my_skills ) {
+            const skill_id &id = pair.first;
+            if( pupil->get_skill_level( id ) < pair.second.level() ) {
+                ret.push_back( id );
+            }
+        }
     }
+    return ret;
 }
 
 std::string talker_item::skill_training_text( const talker &student,
         const skill_id &skill_to_learn ) const
 {
     player *pupil = student.get_character();
-    if( pupil ) {
-        return skill_to_learn.name();
-    } else {
+    if( !pupil ) {
         return "";
     }
+    SkillLevel skill_level_obj = pupil->get_skill_level_object( skill_to_learn );
+    const int cur_level = skill_level_obj.level();
+    const int cost = is_friendly( *pupil ) ? 0 : 10 * ( 1 + cur_level ) * ( 1 + cur_level );
+    const int cur_level_exercise = skill_level_obj.exercise();
+    skill_level_obj.train( 100 );
+    const int next_level = skill_level_obj.level();
+    const int next_level_exercise = skill_level_obj.exercise();
+
+    //~Skill name: current level (exercise) -> next level (exercise) (cost in dollars)
+    return string_format( cost > 0 ?  _( "%s: %d (%d%%) -> %d (%d%%) (cost $%d)" ) :
+                          _( "%s: %d (%d%%) -> %d (%d%%)" ), skill_to_learn.obj().name(),
+                          cur_level, cur_level_exercise, next_level, next_level_exercise,
+                          cost );
 }
 
 std::vector<matype_id> talker_item::styles_offered_to( const talker &student ) const
 {
+    std::vector<matype_id> teachable;
     player *pupil = student.get_character();
     if( pupil ) {
-        return {};
-    } else {
-        return {};
+        for( const matype_id &teacher_style : me_chat().my_styles ) {
+            if( !pupil->martial_arts_data.knows_style( teacher_style ) ) {
+                teachable.push_back( teacher_style );
+            }
+        }
     }
+    return teachable;
 }
 
 std::string talker_item::style_training_text( const talker &student,
         const matype_id &style_to_learn ) const
 {
     player *pupil = student.get_character();
-    if( pupil ) {
-        return style_to_learn.name();
-    } else {
+    if( !pupil ) {
         return "";
+    } else if( is_friendly( *pupil ) ) {
+        return string_format( "%s", style_to_learn.obj().name );
+    } else {
+        return string_format( _( "%s ( cost $%d )" ), style_to_learn.obj().name, 8 );
     }
+
 }
 
 std::vector<spell_id> talker_item::spells_offered_to( talker &student )
 {
+    std::vector<spell_id> teachable;
     player *pupil = student.get_character();
     if( pupil ) {
-        return {};
-    } else {
-        return {};
+        for( const auto &sp_data : me_chat().my_spells ) {
+            const spell_id &teacher_spell = sp_data.first;
+            const int teacher_level = sp_data.second;
+            if( pupil->magic.can_learn_spell( *pupil, teacher_spell ) ) {
+                if( pupil->magic.knows_spell( teacher_spell ) ) {
+                    const spell &student_spell = pupil->magic.get_spell( teacher_spell );
+                    if( student_spell.is_max_level() ||
+                        student_spell.get_level() >= teacher_level ) {
+                        continue;
+                    }
+                }
+                teachable.emplace_back( teacher_spell );
+            }
+        }
     }
+    return teachable;
+
 }
 
 std::string talker_item::spell_training_text( talker &student, const spell_id &spell_to_learn )
 {
     player *pupil = student.get_character();
-    if( pupil ) {
-        return spell_to_learn.name();
-    } else {
+    if( !pupil || me_chat().my_spells.find( spell_to_learn ) == me_chat().my_spells.end() ) {
         return "";
     }
+    const spell &temp_spell = pupil->magic.get_spell( spell_to_learn );
+    const bool knows = pupil->magic.knows_spell( spell_to_learn );
+    const int cost = is_friendly( *pupil ) ? 0 : std::max( 1, temp_spell.get_difficulty() ) *
+                     std::max( 1, me_chat().my_spells[spell_to_learn] ) * 100;
+    std::string text;
+    if( knows ) {
+        text = string_format( _( "%s: 1 hour lesson (cost %s)" ), temp_spell.name(),
+                              format_money( cost ) );
+    } else {
+        text = string_format( _( "%s: teaching spell knowledge (cost %s)" ),
+                              temp_spell.name(), format_money( 2 * cost ) );
+    }
+    return text;
 }
 
 void talker_item::store_chosen_training( const skill_id &train_skill, const matype_id &train_style,
@@ -221,6 +288,10 @@ void talker_item::add_effect( const efftype_id &new_effect, const time_duration 
 
 void talker_item::remove_effect( const efftype_id &lose_effect )
 {
+    const auto it = me_chat().my_effects.find( lose_effect );
+    if( it != me_chat().my_effects.end() ) {
+        me_chat().my_effects.erase( it );
+    }
 }
 
 std::string talker_item::get_value( const std::string &val_to_test ) const
@@ -310,10 +381,14 @@ std::string talker_item::short_description() const
 // speaking
 void talker_item::say( const std::string &speech )
 {
+    add_msg( string_format( _( "%s says %s" ), disp_name(), speech ) );
 }
 
-void talker_item::shout( const std::string &speech = "", bool order = false )
+void talker_item::shout( const std::string &speech, const bool order )
 {
+    if( order ) {
+        add_msg( string_format( _( "%s shouts %s" ), disp_name(), speech ) );
+    }
 }
 
 // miscellaneous

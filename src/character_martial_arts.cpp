@@ -51,6 +51,11 @@ bool character_martial_arts::knows_selected_style() const
     return has_martialart( style_selected );
 }
 
+bool  character_martial_arts::knows_style( const matype_id &style_to_check ) const
+{
+    return has_martialart( style_to_check );
+}
+
 bool character_martial_arts::selected_is_none() const
 {
     return style_selected == style_none;

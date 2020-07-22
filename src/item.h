@@ -2059,7 +2059,7 @@ class item : public visitable<item>
         bool is_old_owner( const Character &c, bool available_to_take = false ) const;
         std::string get_owner_name() const;
         int get_min_str() const;
-        cata::value_ptr<smart_chatbin> get_chatbin();
+        cata::value_ptr<smart_chatbin> &get_chatbin();
 
         const cata::value_ptr<islot_comestible> &get_comestible() const;
 

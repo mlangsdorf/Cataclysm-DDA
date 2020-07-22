@@ -1397,11 +1397,11 @@ void item::validate_ownership() const
     }
 }
 
-cata::value_ptr<smart_chatbin> item::get_chatbin()
+cata::value_ptr<smart_chatbin> &item::get_chatbin()
 {
     if( !chatbin ) {
         if( type->dialogue_data ) {
-            chatbin = type->dialogue_data; // some transform here?
+            chatbin = type->dialogue_data;
         } else {
             chatbin = nullptr;
         }
