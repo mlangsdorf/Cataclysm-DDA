@@ -36,7 +36,10 @@ char vehicle::part_sym( const int p, const bool exact ) const
         return ' ';
     }
 
-    const int displayed_part = exact ? p : part_displayed_at( parts[p].mount );
+    int displayed_part = exact ? p : part_displayed_at( parts[p].mount, true );
+    if( displayed_part == -1 ) {
+        displayed_part = p;
+    }
 
     if( part_flag( displayed_part, VPFLAG_OPENABLE ) && parts[displayed_part].open ) {
         // open door
@@ -57,7 +60,7 @@ vpart_id vehicle::part_id_string( const int p, char &part_mod ) const
         return vpart_id::NULL_ID();
     }
 
-    int displayed_part = part_displayed_at( parts[p].mount );
+    int displayed_part = part_displayed_at( parts[p].mount, true );
     if( displayed_part < 0 || displayed_part >= static_cast<int>( parts.size() ) ||
         parts[ displayed_part ].removed ) {
         return vpart_id::NULL_ID();
@@ -94,7 +97,7 @@ nc_color vehicle::part_color( const int p, const bool exact ) const
     if( parm >= 0 ) {
         col = part_info( parm ).color;
     } else {
-        const int displayed_part = exact ? p : part_displayed_at( parts[p].mount );
+        const int displayed_part = exact ? p : part_displayed_at( parts[p].mount, true );
 
         if( displayed_part < 0 || displayed_part >= static_cast<int>( parts.size() ) ) {
             return c_black;
