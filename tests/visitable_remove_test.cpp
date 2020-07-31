@@ -13,6 +13,7 @@
 #include "item_contents.h"
 #include "itype.h"
 #include "map.h"
+#include "map_helpers.h"
 #include "map_selector.h"
 #include "optional.h"
 #include "character.h"
@@ -51,6 +52,7 @@ TEST_CASE( "visitable_remove", "[visitable]" )
     p.inv.clear();
     p.remove_weapon();
     p.wear_item( item( "backpack" ) ); // so we don't drop anything
+    clear_map();
     map &here = get_map();
 
     // check if all tiles within radius are loaded within current submap and passable
@@ -415,12 +417,22 @@ TEST_CASE( "visitable_remove", "[visitable]" )
     GIVEN( "An adjacent vehicle contains several bottles of water" ) {
         std::vector<tripoint> tiles = closest_points_first( p.pos(), 1 );
         tiles.erase( tiles.begin() ); // player tile
+        REQUIRE( std::count_if( tiles.begin(), tiles.end(), [&here]( const tripoint & e ) {
+            return static_cast<bool>( here.veh_at( e ) );
+        } ) == 0 );
+
         tripoint veh = random_entry( tiles );
         REQUIRE( here.add_vehicle( vproto_id( "shopping_cart" ), veh, 0, 0, 0 ) );
 
-        REQUIRE( std::count_if( tiles.begin(), tiles.end(), [&here]( const tripoint & e ) {
-            return static_cast<bool>( here.veh_at( e ) );
-        } ) == 1 );
+        bool foundit = false;
+        for( const tripoint &e : tiles ) {
+            optional_vpart_position vp = here.veh_at( e );
+            if( vp ) {
+                REQUIRE( e == veh );
+                foundit = true;
+            }
+        }
+        REQUIRE( foundit );
 
         const cata::optional<vpart_reference> vp = here.veh_at( veh ).part_with_feature( "CARGO", true );
         REQUIRE( vp );
