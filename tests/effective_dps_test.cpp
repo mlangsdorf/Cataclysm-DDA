@@ -408,8 +408,9 @@ TEST_CASE( "expected weapon dps", "[expected][dps]" )
         calc_expected_dps( test_guy, "nodachi", 26.5 );
         calc_expected_dps( test_guy, "zweihander", 27.0 );
         calc_expected_dps( test_guy, "estoc", 27.0 );
-        calc_expected_dps( test_guy, "longsword", 24.25 );
+        calc_expected_dps( test_guy, "longsword", 25.0 );
         calc_expected_dps( test_guy, "katana", 25.0 );
+	calc_expected_dps( test_guy, "kriegsmesser", 25.0 );
         calc_expected_dps( test_guy, "longsword_inferior", 18.5 );
         calc_expected_dps( test_guy, "zweihander_inferior", 16.5 );
         calc_expected_dps( test_guy, "katana_inferior", 14.0 );
@@ -444,6 +445,7 @@ TEST_CASE( "expected weapon dps", "[expected][dps]" )
         calc_expected_dps( test_guy, "kukri", 22.75 );
         calc_expected_dps( test_guy, "wakizashi", 22.0 );
         calc_expected_dps( test_guy, "sword_xiphos", 22.0 );
+	calc_expected_dps( test_guy, "falchion", 22.0 );
         calc_expected_dps( test_guy, "khopesh", 21.0 );
         calc_expected_dps( test_guy, "survivor_machete", 21.0 );
         calc_expected_dps( test_guy, "cavalry_sabre", 20.0 );
