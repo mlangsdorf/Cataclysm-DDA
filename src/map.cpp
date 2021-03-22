@@ -7584,6 +7584,9 @@ void map::spawn_monsters_submap( const tripoint &gp, bool ignore_sight )
             } else {
                 tmp.ammo = tmp.type->starting_ammo;
             }
+            if( i.data.expire_in > 0_seconds ) {
+                tmp.expire_at = calendar::turn + i.data.expire_in;
+            }
 
             const auto valid_location = [&]( const tripoint & p ) {
                 // Checking for creatures via g is only meaningful if this is the main game map.

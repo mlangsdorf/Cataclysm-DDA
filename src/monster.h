@@ -172,6 +172,7 @@ class monster : public Creature
         void serialize( JsonOut &json ) const;
         void deserialize( JsonIn &jsin );
 
+        time_point expire_at;   // If set, the monster will not be loaded after this time_point
         tripoint move_target(); // Returns point at the end of the monster's current plans
         Creature *attack_target(); // Returns the creature at the end of plans (if hostile)
 

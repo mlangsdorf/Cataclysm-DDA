@@ -5154,6 +5154,9 @@ monster *game::place_critter_around( const shared_ptr_fast<monster> &mon,
                                      const int radius,
                                      bool forced )
 {
+    if( mon->expire_at > calendar::turn_zero && mon->expire_at < calendar::turn ) {
+        return nullptr;
+    }
     cata::optional<tripoint> where;
     if( forced || can_place_monster( *mon, center ) ) {
         where = center;

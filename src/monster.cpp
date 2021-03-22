@@ -225,6 +225,7 @@ monster::monster()
     upgrades = false;
     upgrade_time = -1;
     last_updated = calendar::turn_zero;
+    expire_at = calendar::turn_zero;
     biosig_timer = calendar::before_time_starts;
     udder_timer = calendar::turn;
     horde_attraction = MHA_NULL;

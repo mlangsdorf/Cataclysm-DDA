@@ -1330,6 +1330,10 @@ class jmapgen_monster : public jmapgen_piece
                         data.patrol_points_rel_ms.push_back( point( ptx.get(), pty.get() ) );
                     }
                 }
+                if( sd.has_string( "expire" ) ) {
+                    data.expire_in = read_from_json_string<time_duration>( *sd.get_raw( "expire" ),
+                                     time_duration::units );
+                }
             }
         }
         void apply( const mapgendata &dat, const jmapgen_int &x, const jmapgen_int &y

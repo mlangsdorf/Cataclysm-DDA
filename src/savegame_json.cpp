@@ -2181,6 +2181,7 @@ void monster::load( const JsonObject &data )
     data.read( "stairscount", staircount ); // really?
     data.read( "fish_population", fish_population );
     data.read( "summon_time_limit", summon_time_limit );
+    data.read( "expire_at", expire_at );
 
     // This is relative to the monster so it isn't invalidated by map shifting.
     tripoint destination;
@@ -2289,6 +2290,7 @@ void monster::store( JsonOut &json ) const
     json.member( "udder_timer", udder_timer );
 
     json.member( "summon_time_limit", summon_time_limit );
+    json.member( "expire_at", expire_at );
 
     if( horde_attraction > MHA_NULL && horde_attraction < NUM_MONSTER_HORDE_ATTRACTION ) {
         json.member( "horde_attraction", horde_attraction );
