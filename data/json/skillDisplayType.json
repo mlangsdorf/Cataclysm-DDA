@@ -2,6 +2,7 @@
   {
     "type": "skill_display_type",
     "id": "display_melee",
+    "//": "this is a test",
     "display_string": "Melee skills"
   },
   {
