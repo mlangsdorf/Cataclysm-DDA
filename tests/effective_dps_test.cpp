@@ -404,12 +404,12 @@ TEST_CASE( "expected weapon dps", "[expected][dps]" )
         calc_expected_dps( test_guy, "heavy_flashlight", 7.5 );
         calc_expected_dps( test_guy, "rock", 6.0 );
     }
-    SECTION( "two-handed swords" ) { // expected value around 27, 25 for long swords
-        calc_expected_dps( test_guy, "nodachi", 26.5 );
-        calc_expected_dps( test_guy, "zweihander", 27.0 );
-        calc_expected_dps( test_guy, "estoc", 27.0 );
-        calc_expected_dps( test_guy, "longsword", 24.25 );
-        calc_expected_dps( test_guy, "katana", 25.0 );
+    SECTION( "two-handed swords" ) { // expected value around 31, 29 for long swords
+        calc_expected_dps( test_guy, "nodachi", 31.0 );
+        calc_expected_dps( test_guy, "zweihander", 31.0 );
+        calc_expected_dps( test_guy, "estoc", 31.0 );
+        calc_expected_dps( test_guy, "longsword", 29.0 );
+        calc_expected_dps( test_guy, "katana", 29.0 );
         calc_expected_dps( test_guy, "longsword_inferior", 18.5 );
         calc_expected_dps( test_guy, "zweihander_inferior", 16.5 );
         calc_expected_dps( test_guy, "katana_inferior", 14.0 );
@@ -421,11 +421,11 @@ TEST_CASE( "expected weapon dps", "[expected][dps]" )
         calc_expected_dps( test_guy, "nodachi_fake", 9.0 );
         calc_expected_dps( test_guy, "katana_fake", 8.0 );
     }
-    SECTION( "swords" ) { // expected value 24, does not include shortswords
-        calc_expected_dps( test_guy, "broadsword", 24.0 );
-        calc_expected_dps( test_guy, "rapier", 24.0 );
-        calc_expected_dps( test_guy, "arming_sword", 24.0 ); // heavier than a broadsword
-        calc_expected_dps( test_guy, "jian", 24.0 );
+    SECTION( "swords" ) { // expected value 27, does not include shortswords
+        calc_expected_dps( test_guy, "broadsword", 27.0 );
+        calc_expected_dps( test_guy, "rapier", 27.0 );
+        calc_expected_dps( test_guy, "arming_sword", 27.0 ); // heavier than a broadsword
+        calc_expected_dps( test_guy, "jian", 27.0 );
         calc_expected_dps( test_guy, "broadsword_inferior", 20.0 );
         calc_expected_dps( test_guy, "arming_sword_inferior", 18.0 );
         calc_expected_dps( test_guy, "jian_inferior", 19.0 );
@@ -436,13 +436,13 @@ TEST_CASE( "expected weapon dps", "[expected][dps]" )
         calc_expected_dps( test_guy, "glass_macuahuitl", 11.0 );
         calc_expected_dps( test_guy, "blade_scythe", 5.25 );
     }
-    SECTION( "shortswords" ) { // expected value 22
-        calc_expected_dps( test_guy, "scimitar", 22.0 );
-        calc_expected_dps( test_guy, "butterfly_swords", 22.0 );
-        calc_expected_dps( test_guy, "cutlass", 22.0 );
+    SECTION( "shortswords" ) { // expected value 23
+        calc_expected_dps( test_guy, "scimitar", 23.0 );
+        calc_expected_dps( test_guy, "butterfly_swords", 23.0 );
+        calc_expected_dps( test_guy, "cutlass", 23.0 );
         calc_expected_dps( test_guy, "sword_bayonet", 22.75 );
         calc_expected_dps( test_guy, "kukri", 22.75 );
-        calc_expected_dps( test_guy, "wakizashi", 22.0 );
+        calc_expected_dps( test_guy, "wakizashi", 23.0 );
         calc_expected_dps( test_guy, "sword_xiphos", 22.0 );
         calc_expected_dps( test_guy, "khopesh", 21.0 );
         calc_expected_dps( test_guy, "survivor_machete", 21.0 );
